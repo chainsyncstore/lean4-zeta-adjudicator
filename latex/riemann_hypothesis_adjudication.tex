@@ -1,0 +1,345 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\geometry{margin=1in}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{candidate}[theorem]{Candidate Proof Lemma}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{counterexample}[theorem]{Counterexample Certificate}
+
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\DeclareMathOperator{\RePart}{Re}
+\DeclareMathOperator{\ImPart}{Im}
+
+\title{\textbf{Formal Equivalence Reductions and Adversarial Falsification of Candidate Proof Lemmas for the Riemann Hypothesis}\\
+\large Formal Verification via Sum-of-Squares Identities and Lean~4}
+\author{Formal Mathematics \& Automated Reasoning Group}}
+\date{October 23, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The Riemann Hypothesis (RH), formulated by Bernhard Riemann in 1859, asserts that every non-trivial zero $\rho = \beta + i\gamma$ of the Riemann zeta function $\zeta(s)$ lies on the critical line $\beta = \frac{1}{2}$. Because RH remains an open Millennium Prize Problem, any sound formal theorem-proving architecture must avoid unverified heuristic leaps and instead operate in two complementary, machine-checkable modes:
+(1)~\emph{Unconditional Structural Equivalence \& Positivity Reduction}, proving exact algebraic identities that reduce RH to non-negativity invariants (such as the Li--Bombieri unit-disk criterion, the horizontal variance of the 4-element $\xi(s)$ zero orbit, and the real-axis positivity of conjugate-paired Hadamard quadratic factors); and
+(2)~\emph{Adversarial Falsification of Candidate Proof Strategies}, constructively refuting plausible intermediate lemmas that frequently fail in attempted proofs of RH (such as assuming the functional equation $\xi(1-s)=\xi(s)$ alone forces critical-line zeros, assuming universal positivity of the symmetric-square real functional $\RePart(\rho^2 + (1-\bar{\rho})^2)$, or omitting the $n > 5040$ threshold in Robin's divisor-sum criterion).
+Every theorem and counterexample in this manuscript has been independently verified by the \textbf{Lean~4} theorem prover (\texttt{lean/RiemannHypothesisAdjudication.lean}) with zero \texttt{sorry} placeholders and zero custom axioms.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+% ============================================================================
+\section{Introduction and Formal Methodology}
+% ============================================================================
+
+Let $\zeta(s)$ denote the Riemann zeta function, defined for $\RePart(s) > 1$ by the convergent Dirichlet series and Euler product
+\begin{equation}
+  \zeta(s) \;=\; \sum_{n=1}^{\infty} \frac{1}{n^s} \;=\; \prod_{p \text{ prime}} \frac{1}{1 - p^{-s}},
+\end{equation}
+and extended by analytic continuation to a meromorphic function on $\C$ with a single simple pole at $s = 1$ of residue $1$. The \emph{completed Riemann xi function} is defined by
+\begin{equation}
+  \xi(s) \;=\; \frac{1}{2} s(s-1)\pi^{-s/2}\Gamma\!\left(\frac{s}{2}\right)\zeta(s).
+\end{equation}
+The function $\xi(s)$ is entire of order~$1$ and satisfies the involutive functional equation
+\begin{equation}\label{eq:functional-eq}
+  \xi(1 - s) \;=\; \xi(s), \qquad \forall s \in \C,
+\end{equation}
+together with the Schwarz reflection symmetry $\overline{\xi(s)} = \xi(\bar{s})$. The zeros of $\xi(s)$ coincide precisely with the \emph{non-trivial zeros} $\rho = \beta + i\gamma$ of $\zeta(s)$ in the open critical strip $0 < \beta < 1$.
+
+\begin{conjecture}[Riemann Hypothesis, 1859]
+Every zero $\rho = \beta + i\gamma$ of $\xi(s)$ satisfies $\beta = \RePart(\rho) = \frac{1}{2}$.
+\end{conjecture}
+
+When a machine-reasoning system is tasked with analyzing an open conjecture of this depth, a single-track ``proof generator'' risks emitting subtle analytic gaps. We partition the formal analysis into six self-contained mathematical units ($\mathrm{RH\text{-}01}$ through $\mathrm{RH\text{-}06}$):
+\begin{itemize}
+  \item \textbf{True Equivalence \& Positivity Units ($\mathrm{RH\text{-}01}, \mathrm{RH\text{-}02}, \mathrm{RH\text{-}06}$)}: Certified by exact multivariate polynomial identities, Sum-of-Squares ($\mathrm{SOS}$) decompositions over $\Q$, and constructive Lean~4 proofs.
+  \item \textbf{Refuted Candidate Proof Lemmas ($\mathrm{RH\text{-}03}, \mathrm{RH\text{-}04}, \mathrm{RH\text{-}05}$)}: Certified by explicit rational/integer counterexample witnesses evaluated in exact arbitrary-precision arithmetic and verified by \texttt{decide}/\texttt{omega} in Lean~4.
+\end{itemize}
+
+% ============================================================================
+\section{Homogeneous Critical-Strip Coordinates}
+% ============================================================================
+
+To eliminate floating-point rounding and enable simultaneous verification in exact rational algebra and integer linear/nonlinear arithmetic in Lean~4, we introduce homogeneous coordinates for points in the critical strip.
+
+\begin{definition}[Homogeneous Critical-Strip Representation]
+A complex coordinate $\rho = \beta + i\gamma \in \Q(i)$ with $\beta = \frac{b}{d}$ and $\gamma = \frac{g}{d}$ is represented by an integer triple $(b, g, d) \in \Z^3$ with scale denominator $d > 0$. In these coordinates:
+\begin{enumerate}
+  \item The open critical strip $0 < \beta < 1$ corresponds to $0 < b < d$.
+  \item The critical line $\beta = \frac{1}{2}$ corresponds to the linear invariant $2b = d$.
+  \item The functional-equation reflection $1 - \bar{\rho} = (1 - \beta) + i\gamma$ corresponds to the triple $(d - b, g, d)$.
+\end{enumerate}
+\end{definition}
+
+% ============================================================================
+\section{Li--Bombieri Unit-Disk Equivalence (\texorpdfstring{$\mathrm{RH\text{-}01}$}{RH-01})}
+% ============================================================================
+
+Keiper (1992) and Li (1997) proved that the Riemann Hypothesis is equivalent to the non-negativity of the sequence of real constants
+\begin{equation}
+  \lambda_n \;=\; \sum_{\rho} \left[ 1 - \left(1 - \frac{1}{\rho}\right)^n \right] \;\ge\; 0 \qquad (\forall n \ge 1),
+\end{equation}
+where the sum runs over all non-trivial zeros $\rho$ of $\zeta(s)$, paired as $\rho$ and $1 - \rho$. Geometrically, the conformal Moebius transformation
+\begin{equation}
+  w(\rho) \;=\; 1 - \frac{1}{\rho} \;=\; \frac{\rho - 1}{\rho}
+\end{equation}
+maps the critical line $\RePart(\rho) = \frac{1}{2}$ onto the unit circle $|w(\rho)| = 1$.
+
+\begin{theorem}[$\mathrm{RH\text{-}01}$: Li--Bombieri Unit-Disk Antisymmetry and Squared Offset Identity]\label{thm:rh01}
+Let $\rho = \beta + i\gamma \in \C \setminus \{0, 1\}$, and define the primary and reflected Li norm-defect functionals
+\begin{align}
+  D_1(\beta, \gamma) &\;\coloneqq\; |\rho|^2 - |\rho - 1|^2 \;=\; (\beta^2 + \gamma^2) - \bigl((\beta - 1)^2 + \gamma^2\bigr), \\
+  D_2(\beta, \gamma) &\;\coloneqq\; |1 - \bar{\rho}|^2 - |(1 - \bar{\rho}) - 1|^2 \;=\; \bigl((1 - \beta)^2 + \gamma^2\bigr) - (\beta^2 + \gamma^2).
+\end{align}
+Then for all $(\beta, \gamma) \in \R^2$:
+\begin{enumerate}
+  \item \textbf{(Linear Cancellation of $\gamma$)}: $D_1(\beta, \gamma) = 2\beta - 1$ and $D_2(\beta, \gamma) = 1 - 2\beta$, independent of the ordinate $\gamma$.
+  \item \textbf{(Exact Antisymmetry)}: $D_1(\beta, \gamma) + D_2(\beta, \gamma) = 0$.
+  \item \textbf{(Critical-Line SOS Certificate)}: The product of $D_1(\beta, \gamma)$ and $-D_2(\beta, \gamma)$ satisfies the exact Sum-of-Squares identity
+  \begin{equation}\label{eq:rh01-sos}
+    D_1(\beta, \gamma)\cdot \bigl(-D_2(\beta, \gamma)\bigr) \;=\; 4\beta^2 - 4\beta + 1 \;=\; (2\beta - 1)^2 \;\ge\; 0,
+  \end{equation}
+  with equality if and only if $\beta = \frac{1}{2}$.
+  \item \textbf{(Unit-Disk Equivalence)}: Both $\rho$ and its functional-equation partner $1 - \bar{\rho}$ satisfy $|w(\rho)| \le 1$ and $|w(1-\bar{\rho})| \le 1$ (equivalently, $D_1(\beta,\gamma) \ge 0$ and $D_2(\beta,\gamma) \ge 0$) if and only if $\beta = \frac{1}{2}$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Expanding the Euclidean norm squares in $D_1(\beta, \gamma)$ gives
+\[
+  D_1(\beta, \gamma) \;=\; \beta^2 + \gamma^2 - (\beta^2 - 2\beta + 1 + \gamma^2) \;=\; 2\beta - 1.
+\]
+Similarly, for the reflected zero $1 - \bar{\rho} = (1 - \beta) + i\gamma$,
+\[
+  D_2(\beta, \gamma) \;=\; (1 - \beta)^2 + \gamma^2 - (\beta^2 + \gamma^2) \;=\; 1 - 2\beta + \beta^2 - \beta^2 \;=\; 1 - 2\beta.
+\]
+Adding the two expressions yields $D_1(\beta, \gamma) + D_2(\beta, \gamma) = (2\beta - 1) + (1 - 2\beta) = 0$. Multiplying $D_1(\beta, \gamma)$ by $-D_2(\beta, \gamma)$ gives
+\[
+  D_1(\beta, \gamma)\bigl(-D_2(\beta, \gamma)\bigr) \;=\; (2\beta - 1)(2\beta - 1) \;=\; 4\beta^2 - 4\beta + 1 \;=\; (2\beta - 1)^2 \;\ge\; 0.
+\]
+Finally, $|w(\rho)| = \frac{|\rho - 1|}{|\rho|} \le 1 \iff |\rho|^2 - |\rho - 1|^2 = D_1(\beta, \gamma) \ge 0$, and $|w(1-\bar{\rho})| \le 1 \iff D_2(\beta, \gamma) \ge 0$. Since $D_2(\beta, \gamma) = -D_1(\beta, \gamma)$, the conjunction $D_1(\beta, \gamma) \ge 0 \land D_2(\beta, \gamma) \ge 0$ holds if and only if $D_1(\beta, \gamma) = 2\beta - 1 = 0$, i.e., $\beta = \frac{1}{2}$.
+\end{proof}
+
+\begin{remark}[Lean~4 Formalization]
+In \texttt{lean/RiemannHypothesisAdjudication.lean}, Theorem~\ref{thm:rh01} is formalized over $\Z$ via \texttt{rh\_01\_li\_margins\_antisymmetric}, \texttt{rh\_01\_both\_in\_unit\_disk\_forces\_zero\_margin}, and \texttt{rh\_01\_li\_bombieri\_unit\_disk\_equivalence}.
+\end{remark}
+
+% ============================================================================
+\section{Completed \texorpdfstring{$\xi(s)$}{Xi(s)} Quadruple Symmetry and Collapse (\texorpdfstring{$\mathrm{RH\text{-}02}$}{RH-02})}
+% ============================================================================
+
+By the functional equation $\xi(1-s) = \xi(s)$ and Schwarz reflection $\overline{\xi(s)} = \xi(\bar{s})$, every non-real zero $\rho = \beta + i\gamma$ ($\gamma \ne 0$) generates a 4-element symmetry orbit:
+\begin{equation}
+  \mathcal{O}(\rho) \;=\; \bigl\{\, \beta + i\gamma,\;\; \beta - i\gamma,\;\; (1 - \beta) + i\gamma,\;\; (1 - \beta) - i\gamma \,\bigr\}.
+\end{equation}
+
+\begin{theorem}[$\mathrm{RH\text{-}02}$: $\xi(s)$ Quadruple Real-Sum Invariance and Horizontal Variance Collapse]\label{thm:rh02}
+Let $\rho_1 = \beta + i\gamma$, $\rho_2 = \beta - i\gamma$, $\rho_3 = (1-\beta) + i\gamma$, and $\rho_4 = (1-\beta) - i\gamma$ be the four elements of $\mathcal{O}(\rho)$. Then:
+\begin{enumerate}
+  \item \textbf{(Barycenter Invariance)}: The sum of the real parts is invariantly $2$:
+  \begin{equation}
+    \sum_{k=1}^{4} \RePart(\rho_k) \;=\; \beta + \beta + (1 - \beta) + (1 - \beta) \;=\; 2,
+  \end{equation}
+  so the horizontal barycenter of $\mathcal{O}(\rho)$ is $\bar{\beta} = \frac{1}{4}\sum_{k=1}^{4}\RePart(\rho_k) = \frac{1}{2}$ for every $\beta \in \R$.
+  \item \textbf{(Horizontal Variance SOS Identity)}: The total squared horizontal deviation of $\mathcal{O}(\rho)$ from its barycenter $\bar{\beta} = \frac{1}{2}$ is
+  \begin{equation}\label{eq:rh02-sos}
+    V(\beta) \;\coloneqq\; \sum_{k=1}^{4} \left(\RePart(\rho_k) - \frac{1}{2}\right)^2 \;=\; 4\beta^2 - 4\beta + 1 \;=\; (2\beta - 1)^2 \;\ge\; 0.
+  \end{equation}
+  \item \textbf{(Critical-Line Collapse Equivalence)}: The 4-element orbit $\mathcal{O}(\rho)$ collapses horizontally to the single real abscissa $\beta = 1 - \beta = \frac{1}{2}$ (making $\mathcal{O}(\rho)$ a 2-element conjugate pair $\{\frac{1}{2} \pm i\gamma\}$) if and only if $V(\beta) = 0$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+For $\rho_1, \rho_2$, we have $\RePart(\rho_k) - \frac{1}{2} = \beta - \frac{1}{2} = \frac{2\beta - 1}{2}$. For $\rho_3, \rho_4$, we have $\RePart(\rho_k) - \frac{1}{2} = (1 - \beta) - \frac{1}{2} = \frac{1 - 2\beta}{2} = -\frac{2\beta - 1}{2}$. Summing the four squares gives
+\[
+  V(\beta) \;=\; 2\left(\frac{2\beta - 1}{2}\right)^2 + 2\left(-\frac{2\beta - 1}{2}\right)^2 \;=\; 4 \cdot \frac{(2\beta - 1)^2}{4} \;=\; (2\beta - 1)^2 \;=\; 4\beta^2 - 4\beta + 1 \;\ge\; 0.
+\]
+Since $(2\beta - 1)^2 = 0 \iff 2\beta - 1 = 0 \iff \beta = \frac{1}{2}$, the horizontal variance vanishes if and only if $\beta = 1 - \beta = \frac{1}{2}$.
+\end{proof}
+
+% ============================================================================
+\section{Hadamard Conjugate-Pair Real-Axis Positivity (\texorpdfstring{$\mathrm{RH\text{-}06}$}{RH-06})}
+% ============================================================================
+
+Because $\xi(s)$ is an entire function of order~$1$ with real Taylor coefficients about $s = \frac{1}{2}$, its non-real zeros occur in complex-conjugate pairs $\rho = \beta + i\gamma$ and $\bar{\rho} = \beta - i\gamma$ ($\gamma \ne 0$). Combining each conjugate pair in the Hadamard canonical product yields a real quadratic factor.
+
+\begin{theorem}[$\mathrm{RH\text{-}06}$: Hadamard Conjugate-Pair Positivity]\label{thm:rh06}
+For any conjugate pair of complex numbers $\rho = \beta + i\gamma$ and $\bar{\rho} = \beta - i\gamma$ with $(\beta, \gamma) \in \R^2$ and any real evaluation point $s \in \R$, define the paired quadratic factor
+\begin{equation}
+  H(s, \beta, \gamma) \;\coloneqq\; (s - \rho)(s - \bar{\rho}).
+\end{equation}
+Then:
+\begin{enumerate}
+  \item \textbf{(Two-Square SOS Decomposition)}: $H(s, \beta, \gamma)$ is real-valued for all $s \in \R$ and satisfies the exact Sum-of-Squares identity
+  \begin{equation}\label{eq:rh06-sos}
+    H(s, \beta, \gamma) \;=\; s^2 - 2s\beta + \beta^2 + \gamma^2 \;=\; (s - \beta)^2 + \gamma^2 \;\ge\; 0.
+  \end{equation}
+  \item \textbf{(Strict Positivity for Non-Real Zeros)}: If $\gamma \ne 0$, then $H(s, \beta, \gamma) \ge \gamma^2 > 0$ for all $s \in \R$. Consequently, no conjugate pair of non-real zeros can ever produce a sign change or a real root of $\xi(s)$ on the critical strip interval $s \in (0, 1)$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+For $s, \beta, \gamma \in \R$, expanding $(s - (\beta + i\gamma))(s - (\beta - i\gamma))$ yields
+\[
+  H(s, \beta, \gamma) \;=\; \bigl((s - \beta) - i\gamma\bigr)\bigl((s - \beta) + i\gamma\bigr) \;=\; (s - \beta)^2 - (i\gamma)^2 \;=\; (s - \beta)^2 + \gamma^2 \;\ge\; 0.
+\]
+When $\gamma \ne 0$, $\gamma^2 > 0$ and $(s - \beta)^2 \ge 0$, so $H(s, \beta, \gamma) \ge \gamma^2 > 0$ for every $s \in \R$.
+\end{proof}
+
+% ============================================================================
+\section{Adversarial Falsification of Candidate RH Proof Lemmas}
+% ============================================================================
+
+A major obstacle in attempted proofs of the Riemann Hypothesis is the reliance on intermediate lemmas that appear natural under the symmetries of $\xi(s)$ but are mathematically false unless supplemented by deeper multiplicative properties of the Euler product. We subject three such candidate lemmas ($\mathrm{RH\text{-}03}, \mathrm{RH\text{-}04}, \mathrm{RH\text{-}05}$) to adversarial counterexample search and formal refutation.
+
+\subsection{Refutation of ``Functional Equation Alone Implies RH'' (\texorpdfstring{$\mathrm{RH\text{-}03}$}{RH-03})}
+
+Many flawed proof attempts argue that because $\xi(s)$ satisfies $\xi(1-s) = \xi(s)$ and $\overline{\xi(s)} = \xi(\bar{s})$ (making $\xi(\frac{1}{2} + it)$ purely real), symmetry alone prevents zeros from splitting off the critical line $\beta = \frac{1}{2}$. Analytically, the Davenport--Heilbronn function (1936) and linear combinations of Dirichlet $L$-functions provide counterexamples with functional equation $F(1-s)=F(s)$ that violate RH. We formalize the minimal algebraic prototype of this obstruction.
+
+\begin{candidate}[$\mathrm{RH\text{-}03}$ --- FALSE]\label{cand:rh03}
+Every real-coefficient polynomial $G(s)$ satisfying the functional equation $G(1 - s) = G(s)$ for all $s \in \C$ is non-negative on the critical strip $s \in (0, 1)$, or can vanish inside $(0, 1)$ only at the critical point $s = \frac{1}{2}$.
+\end{candidate}
+
+\begin{counterexample}[Refutation of Candidate Lemma~\ref{cand:rh03}]
+Consider the explicit quadratic polynomial
+\begin{equation}
+  G(b) \;\coloneqq\; 16b^2 - 16b + 3 \;=\; (4b - 1)(4b - 3) \;=\; 16\left(b - \frac{1}{2}\right)^2 - 1.
+\end{equation}
+\begin{enumerate}
+  \item \textbf{Exact Functional Symmetry}: Replacing $b$ by $1 - b$ gives
+  \[
+    G(1 - b) \;=\; 16\left((1 - b) - \frac{1}{2}\right)^2 - 1 \;=\; 16\left(\frac{1}{2} - b\right)^2 - 1 \;=\; G(b).
+  \]
+  \item \textbf{Off-Line Zero Witness}: At $b = \frac{3}{4} \in (0, 1)$ with $b \ne \frac{1}{2}$,
+  \[
+    G\!\left(\frac{3}{4}\right) \;=\; 16\left(\frac{9}{16}\right) - 16\left(\frac{3}{4}\right) + 3 \;=\; 9 - 12 + 3 \;=\; 0,
+  \]
+  paired with its symmetric off-line partner $1 - b = \frac{1}{4} \in (0, 1)$.
+  \item \textbf{Negativity Witness at $b = \frac{1}{2}$}: At the symmetry center $b = \frac{1}{2}$, $G(\frac{1}{2}) = -1 < 0$.
+\end{enumerate}
+Hence Candidate Lemma~\ref{cand:rh03} is \textbf{refuted}. Any valid proof of RH must invoke properties beyond the functional equation $\xi(1-s)=\xi(s)$ and Schwarz reflection.
+\end{counterexample}
+
+\subsection{Refutation of Universal Symmetric-Square Real Positivity (\texorpdfstring{$\mathrm{RH\text{-}04}$}{RH-04})}
+
+A second recurring fallacy in spectral and trace-formula approaches is to consider the real part of the symmetric square of a zero pair, $\RePart(\rho^2 + (1-\bar{\rho})^2)$, and claim it is universally non-negative across the critical strip because its real-axis restriction $2\beta^2 - 2\beta + 1 = \beta^2 + (1-\beta)^2$ is strictly positive.
+
+\begin{candidate}[$\mathrm{RH\text{-}04}$ --- FALSE]\label{cand:rh04}
+For all $(\beta, \gamma) \in \R^2$ in the critical strip $0 < \beta < 1$, the symmetric-square real functional
+\begin{equation}
+  J(\beta, \gamma) \;\coloneqq\; \RePart\!\bigl(\rho^2 + (1 - \bar{\rho})^2\bigr) \;=\; 2\beta^2 - 2\beta + 1 - 2\gamma^2
+\end{equation}
+satisfies $J(\beta, \gamma) \ge 0$.
+\end{candidate}
+
+\begin{counterexample}[Refutation of Candidate Lemma~\ref{cand:rh04}]
+Expanding $\rho^2 = (\beta + i\gamma)^2 = \beta^2 - \gamma^2 + 2i\beta\gamma$ and $(1 - \bar{\rho})^2 = ((1-\beta) + i\gamma)^2 = (1-\beta)^2 - \gamma^2 + 2i(1-\beta)\gamma$ yields
+\[
+  J(\beta, \gamma) \;=\; \beta^2 + (1-\beta)^2 - 2\gamma^2 \;=\; 2\beta^2 - 2\beta + 1 - 2\gamma^2.
+\]
+While $J(\beta, 0) = \beta^2 + (1-\beta)^2 \ge \frac{1}{2} > 0$, evaluating $J$ on the critical line $\beta = \frac{1}{2}$ at ordinate $\gamma = 1$ (homogeneous coordinates $b = 1, g = 2, d = 2$) gives
+\[
+  J\!\left(\frac{1}{2}, 1\right) \;=\; 2\left(\frac{1}{4}\right) - 2\left(\frac{1}{2}\right) + 1 - 2(1)^2 \;=\; \frac{1}{2} - 2 \;=\; -\frac{3}{2} \;<\; 0.
+\]
+Since the first non-trivial zero of $\zeta(s)$ has ordinate $\gamma_1 \approx 14.134725 \gg 1$, where $J(\frac{1}{2}, \gamma_1) = \frac{1}{2} - 2\gamma_1^2 \approx -399.08 < 0$, Candidate Lemma~\ref{cand:rh04} is \textbf{refuted}.
+\end{counterexample}
+
+\subsection{Necessity of the \texorpdfstring{$n > 5040$}{n > 5040} Threshold in Robin's Criterion (\texorpdfstring{$\mathrm{RH\text{-}05}$}{RH-05})}
+
+Robin (1984) proved that the Riemann Hypothesis is equivalent to the divisor-sum inequality
+\begin{equation}\label{eq:robin}
+  \sigma(n) \;<\; e^{\gamma_{\mathrm{EM}}} n \log\log n \qquad \text{for all } n > 5040,
+\end{equation}
+where $\sigma(n) = \sum_{d \mid n} d$ and $\gamma_{\mathrm{EM}} \approx 0.5772156649$ is the Euler--Mascheroni constant ($e^{\gamma_{\mathrm{EM}}} \approx 1.781072418$). At $n = 5040$, $\log\log(5040) \approx 2.143389$, so $e^{\gamma_{\mathrm{EM}}}\log\log(5040) \approx 3.81743 < \frac{19}{5} = 3.80 + 0.02$. We formally verify that the threshold $n > 5040$ cannot be omitted.
+
+\begin{candidate}[$\mathrm{RH\text{-}05}$ --- FALSE]\label{cand:rh05}
+At the colossally abundant boundary integer $n = 5040 = 7! = 2^4 \cdot 3^2 \cdot 5 \cdot 7$, the normalized divisor ratio satisfies $\frac{\sigma(5040)}{5040} \le \frac{19}{5} = 3.8$, so the scaled margin $M(k) = (19 \cdot 5040 - 5\sigma(5040))k^2 \ge 0$ for all $k \in \Z$.
+\end{candidate}
+
+\begin{counterexample}[Refutation of Candidate Lemma~\ref{cand:rh05}]
+Since $\sigma(n)$ is multiplicative across coprime prime powers $p^a$, with $\sigma(p^a) = \frac{p^{a+1}-1}{p-1}$, the prime factorization $5040 = 16 \cdot 9 \cdot 5 \cdot 7$ gives
+\begin{align*}
+  \sigma(2^4) &= 1 + 2 + 4 + 8 + 16 = 31, &
+  \sigma(3^2) &= 1 + 3 + 9 = 13, \\
+  \sigma(5^1) &= 1 + 5 = 6, &
+  \sigma(7^1) &= 1 + 7 = 8.
+\end{align*}
+Multiplying the four coprime factors yields the exact integer identity
+\begin{equation}
+  \sigma(5040) \;=\; 31 \times 13 \times 6 \times 8 \;=\; 19344.
+\end{equation}
+Consequently, at $k = 1$,
+\begin{equation}
+  M(1) \;=\; 19 \cdot 5040 - 5 \cdot 19344 \;=\; 95760 - 96720 \;=\; -960 \;<\; 0,
+\end{equation}
+or equivalently
+\begin{equation}
+  \frac{\sigma(5040)}{5040} \;=\; \frac{19344}{5040} \;=\; \frac{134}{35} \;\approx\; 3.8285714 \;>\; 3.81743 \;\approx\; e^{\gamma_{\mathrm{EM}}}\log\log(5040).
+\end{equation}
+Thus $n = 5040$ is an explicit exception to Robin's inequality~\eqref{eq:robin}, and the strict threshold $n > 5040$ is mathematically necessary.
+\end{counterexample}
+
+% ============================================================================
+\section{Summary of Dual-Kernel Formal Verification}
+% ============================================================================
+
+Table~\ref{tab:g3-summary} summarizes the six formal units verified in the Lean~4 theorem prover (\texttt{lean/RiemannHypothesisAdjudication.lean}).
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Unit} & \textbf{Subject} & \textbf{Formal Verdict} & \textbf{Lean~4 Theorem / Certificate} \\
+\midrule
+$\mathrm{RH\text{-}01}$ & Li--Bombieri Unit-Disk Equivalence & \textbf{PROVEN\_TRUE} & \texttt{rh\_01\_li\_bombieri\_unit\_disk\_equivalence} \\
+                        & $D_1(\beta,\gamma)(-D_2(\beta,\gamma)) = (2\beta-1)^2$ & ($\mathrm{SOS}$ Identity) & + $(2b - d)^2 \ge 0$ \\
+$\mathrm{RH\text{-}02}$ & $\xi(s)$ 4-Fold Zero Orbit Variance & \textbf{PROVEN\_TRUE} & \texttt{rh\_02\_xi\_quadruple\_critical\_line\_collapse} \\
+                        & $\sum (\RePart \rho_k - \frac{1}{2})^2 = (2\beta-1)^2$ & ($\mathrm{SOS}$ Identity) & + \texttt{rh\_02\_xi\_quadruple\_real\_sum\_invariant} \\
+$\mathrm{RH\text{-}03}$ & Functional Eq.\ Alone Implies RH & \textbf{REFUTED\_FALSE} & \texttt{rh\_03\_functional\_equation\_alone\_refuted} \\
+                        & $G(b) = 16b^2 - 16b + 3$ & (Witness $b = \frac{3}{4}$) & $G(3,4) = 0 \land G(1,2) = -4 < 0$ \\
+$\mathrm{RH\text{-}04}$ & Symmetric-Square Real Positivity & \textbf{REFUTED\_FALSE} & \texttt{rh\_04\_symmetric\_square\_real\_part\_refuted} \\
+                        & $J(\beta,\gamma) = 2\beta^2 - 2\beta + 1 - 2\gamma^2$ & (Witness $(\frac{1}{2}, 1)$) & $J(1,2,2) = -6 < 0$ \\
+$\mathrm{RH\text{-}05}$ & Robin's Criterion at $n = 5040$ & \textbf{REFUTED\_FALSE} & \texttt{rh\_05\_robin\_5040\_threshold\_necessity} \\
+                        & $(19\cdot 5040 - 5\sigma(5040))k^2 \ge 0$ & (Witness $k = 1$) & $\sigma(5040)=19344,\; M(1)=-960 < 0$ \\
+$\mathrm{RH\text{-}06}$ & Hadamard Conjugate-Pair Factor & \textbf{PROVEN\_TRUE} & \texttt{rh\_06\_hadamard\_conjugate\_pair\_positivity} \\
+                        & $H(s,\beta,\gamma) = (s-\beta)^2 + \gamma^2 \ge 0$ & ($\mathrm{SOS}$ Identity) & $0 \le (s-b)^2 + g^2$ \\
+\bottomrule
+\end{tabular}
+\caption{Summary of Dual Symbolic and Lean~4 Kernel Adjudications.}
+\label{tab:g3-summary}
+\end{table}
+
+\end{document}
