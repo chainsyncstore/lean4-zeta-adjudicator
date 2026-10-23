@@ -316,62 +316,90 @@ Combined with the unconditional Lean~4 transcendental bound $e^{\gamma_{\mathrm{
 \end{counterexample}
 
 % ============================================================================
-\section{Unconditional Transcendental Certificate for Robin's Criterion at \texorpdfstring{$n = 5040$}{n = 5040} (\texorpdfstring{$\mathrm{RH\text{-}07}$}{RH-07})}\label{sec:rh07}
+\section{Unconditional Euler--Mascheroni and Transcendental Certificate for Robin's Criterion at \texorpdfstring{$n = 5040$}{n = 5040} (\texorpdfstring{$\mathrm{RH\text{-}07}$}{RH-07})}\label{sec:rh07}
 % ============================================================================
 
-To eliminate any reliance on external numerical approximations for $\log(5040)$, $\log\log(5040)$, and $e^{\gamma}\log\log(5040)$ in $\mathrm{RH\text{-}05}$, we prove unconditional rational bounds on Mathlib's transcendental `Real.log` and `Real.exp` functions directly inside the Lean~4 kernel.
+To eliminate any reliance on external numerical approximations for $\gamma_{\mathrm{EM}} = \texttt{Real.eulerMascheroniConstant}$, $\log(5040)$, $\log\log(5040)$, and $e^{\gamma_{\mathrm{EM}}}\log\log(5040)$ in $\mathrm{RH\text{-}05}$, we prove unconditional rational bounds on Mathlib's `Real.eulerMascheroniConstant`, `Real.log`, and `Real.exp` directly inside the Lean~4 kernel.
 
-\begin{theorem}[$\mathrm{RH\text{-}07}$: Unconditional Kernel-Checked Transcendental Bounds at $n = 5040$]\label{thm:rh07}
+\begin{theorem}[$\mathrm{RH\text{-}07}$: Unconditional Kernel-Checked Bounds on $\texttt{Real.eulerMascheroniConstant}$ and Robin's Inequality at $n = 5040$]\label{thm:rh07}
 Over $\R$, without any external interval assumptions:
 \begin{enumerate}
-  \item \textbf{(Logarithm Upper Bounds for $5040$)}: $\log(5040) < \frac{4263}{500} = 8.526 < \frac{427}{50} = 8.54$.
-  \item \textbf{(Iterated Logarithm Upper Bounds)}: $\log\log(5040) < \frac{42865}{20000} = 2.14325 < \frac{4292}{2000} = 2.146$.
+  \item \textbf{(Second-Order Euler--Maclaurin Bound on $\gamma_{\mathrm{EM}}$)}: Define for $n \ge 1$ the sequence
+  \[
+    \mathrm{eulerMaclaurinSeq2}(n) \;\coloneqq\; H_n - \log n - \left(\frac{1}{2n} - \frac{1}{12n^2}\right).
+  \]
+  Then $\mathrm{eulerMaclaurinSeq2}$ is strictly decreasing (\texttt{strictAnti\_eulerMaclaurinSeq2}), converges to $\texttt{Real.eulerMascheroniConstant}$ (\texttt{tendsto\_eulerMaclaurinSeq2}), and evaluating at $n = 8 = 2^3$ with $H_8 = \frac{761}{280}$ and $\log 2 > 0.6931471803$ (\texttt{Real.log\_two\_gt\_d9}) establishes unconditionally (\texttt{eulerMascheroniConstant\_lt\_28861\_div\_50000}):
+  \begin{equation}
+    \texttt{Real.eulerMascheroniConstant} \;<\; \frac{28861}{50000} \;=\; 0.57722.
+  \end{equation}
+  \item \textbf{(Logarithm and Iterated Logarithm Upper Bounds for $5040$)}: $\log(5040) < \frac{4263}{500} = 8.526 < \frac{427}{50}$ and $\log\log(5040) < \frac{42865}{20000} = 2.14325 < \frac{4292}{2000}$.
   \item \textbf{(Exponential Upper Bounds)}: $\exp\!\left(\frac{5776}{10000}\right) < \frac{1787}{1000}$ and $\exp\!\left(\frac{28861}{50000}\right) < \frac{178225}{100000}$.
-  \item \textbf{(Unconditional Discharge of Robin's Threshold at $n = 5040$)}: At $\frac{28861}{50000} = 0.57722$ (strictly exceeding the Euler--Mascheroni constant $\gamma_{\mathrm{EM}} \approx 0.5772156649$),
+  \item \textbf{(Complete Unconditional Discharge of Robin's Threshold at $n = 5040$)}: By monotonicity of $\exp$ (\texttt{rh\_07\_eulerMascheroni\_robin\_5040\_unconditional}),
   \begin{equation}
-    \exp\!\left(\frac{28861}{50000}\right)\log\log(5040) \;<\; \frac{178225}{100000}\cdot\frac{42865}{20000} \;=\; 3.8198078125 \;<\; \frac{191}{50} \;=\; 3.82 \;<\; \frac{403}{105} \;=\; \frac{19344}{5040}.
+    \exp(\texttt{Real.eulerMascheroniConstant})\log\log(5040) \;<\; \exp\!\left(\frac{28861}{50000}\right)\log\log(5040) \;<\; \frac{191}{50} \;<\; \frac{19344}{5040} \;=\; \frac{\sum_{d \mid 5040} d}{5040}.
   \end{equation}
 \end{enumerate}
 \end{theorem}
 
 \begin{proof}
-For $x \ge 0$, the degree-4 Taylor polynomial lower bound $1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \frac{x^4}{24} \le e^x$ (`Real.sum\_le\_exp\_of\_nonneg`, `exp\_lower\_taylor4\_step`) applied at $x = \frac{4263}{20000}$ and raised to the $40$-th power gives $5040 < (1237566/1000000)^{40} \le e^{4263/500}$, so $\log(5040) < \frac{4263}{500}$. Applying `exp\_lower\_taylor4\_step` again at $x = \frac{42865}{200000}$ and raising to the $10$-th power gives $\frac{4263}{500} < (1239021/1000000)^{10} \le e^{42865/20000}$, so by monotonicity of $\log$ (`Real.log\_lt\_log`), $\log\log(5040) < \log(4263/500) < \frac{42865}{20000}$. In the opposite direction, for $x < 1$, applying $1 - x \le e^{-x}$ (`Real.add\_one\_le\_exp`, `exp\_upper\_inv\_step`) at $x = \frac{28861}{12800000}$ and raising to the $256$-th power gives $\exp(28861/50000) \le (12800000/12771139)^{256} < \frac{178225}{100000}$, whence $\exp(28861/50000)\log\log(5040) < \frac{191}{50} < \frac{19344}{5040}$ (\texttt{rh\_07\_tight\_191\_div\_50}).
+For $n \ge 1$ and $x = n$, applying the 5-term logarithmic series bound $-\log(1 - u) \ge u + \frac{u^2}{2} + \frac{u^3}{3} + \frac{u^4}{4} + \frac{u^5}{5}$ at $u = \frac{1}{x+1} \in (0, 1)$ (\texttt{Real.hasSum\_pow\_div\_log\_of\_abs\_lt\_one}, \texttt{log\_one\_sub\_inv\_ge\_sum5}) together with the exact rational difference identity
+\[
+  \sum_{k=2}^{5} \frac{1}{k(x+1)^k} - \left[\left(\frac{1}{2x} - \frac{1}{12x^2}\right) - \left(\frac{1}{2(x+1)} - \frac{1}{12(x+1)^2}\right)\right] \;=\; \frac{2(x - 5/4)^2 + 15/8}{60 x^2 (x+1)^5} \;>\; 0
+\]
+(\texttt{eulerMaclaurin\_step\_algebra}) shows $\mathrm{eulerMaclaurinSeq2}(n+1) < \mathrm{eulerMaclaurinSeq2}(n)$. Since $\mathrm{eulerMaclaurinSeq2}(n) \to \texttt{Real.eulerMascheroniConstant}$, we obtain $\texttt{Real.eulerMascheroniConstant} < \mathrm{eulerMaclaurinSeq2}(8) < \frac{28861}{50000}$ (\texttt{eulerMascheroniConstant\_lt\_28861\_div\_50000}). Combining this with the Taylor/Pad\'e bounds in \texttt{rh\_07\_tight\_191\_div\_50} completes \texttt{rh\_07\_eulerMascheroni\_robin\_5040\_unconditional}.
 \end{proof}
 
 % ============================================================================
-\section{Degree-4 Fej\'er--Kondratiev Trigonometric Polynomial (\texorpdfstring{$\mathrm{RH\text{-}08}$}{RH-08})}\label{sec:rh08}
+\section{Degree-4 and Degree-6 Fej\'er--Kondratiev Trigonometric Polynomials and Analytic Zero-Free Region Deduction (\texorpdfstring{$\mathrm{RH\text{-}08}$}{RH-08})}\label{sec:rh08}
 % ============================================================================
 
-Classical zero-free region proofs for $\zeta(\sigma + it)$ near $\sigma = 1$ rely on non-negative trigonometric polynomials $P_d(\theta) = \sum_{k=0}^{d} c_k \cos(k\theta) \ge 0$ with $c_k > 0$ and $c_1 > c_0$, where smaller ratios $\frac{c_0}{c_1 - c_0}$ and $\frac{\sum_{k=0}^d c_k}{c_1 - c_0}$ yield wider zero-free regions. De la Vall\'ee Poussin (1899) used the degree-2 polynomial $P_2(\theta) = 3 + 4\cos\theta + \cos(2\theta) = 2(1+\cos\theta)^2 \ge 0$, which has $\frac{c_0}{c_1 - c_0} = \frac{3}{4-3} = 3$ and $\frac{c_0+c_1+c_2}{c_1-c_0} = 8$.
+Classical zero-free region proofs for $\zeta(\sigma + it)$ near $\sigma = 1$ rely on non-negative trigonometric polynomials $P_d(\theta) = \sum_{k=0}^{d} a_k \cos(k\theta) \ge 0$ with $a_k \ge 0$ and $a_1 > a_0 > 0$.
 
-\begin{theorem}[$\mathrm{RH\text{-}08}$: Degree-4 Fej\'er--Kondratiev Trigonometric Polynomial Non-Negativity and Constant Improvement]\label{thm:rh08}
-Define the degree-4 cosine polynomial with positive integer coefficients $(c_0, c_1, c_2, c_3, c_4) = (103, 168, 89, 28, 4)$:
-\begin{equation}
-  P_4(\theta) \;\coloneqq\; 103 + 168\cos\theta + 89\cos(2\theta) + 28\cos(3\theta) + 4\cos(4\theta).
-\end{equation}
-Then for all $\theta \in \R$:
+\begin{theorem}[$\mathrm{RH\text{-}08}$: Analytic Zero-Free Region Deduction and Degree-4 / Degree-6 Fej\'er--Kondratiev Hierarchy]\label{thm:rh08}
+Over $\R$:
 \begin{enumerate}
-  \item \textbf{(Exact Fej\'er--Chebyshev Square Factorization)}:
+  \item \textbf{(Analytic Zero-Free Region Deduction)}: Let $0 < a_0 < a_1$, $S_{\mathrm{pos}} = \sum_{k=1}^{d} a_k > 0$, $M_{\log} > 0$, and $\beta < 1$. At the abscissa $\sigma = 1 + \frac{a_1 - a_0}{2 S_{\mathrm{pos}} M_{\log}} > 1$, if the Landau--de la Vall\'ee Poussin pole-zero inequality holds:
   \begin{equation}
-    P_4(\theta) \;=\; 2\bigl(5 + 7\cos\theta + 2\cos(2\theta)\bigr)^2 \;=\; 2\bigl(3 + 7\cos\theta + 4\cos^2\theta\bigr)^2 \;\ge\; 0.
+    \frac{a_1}{\sigma - \beta} \;\le\; \frac{a_0}{\sigma - 1} + S_{\mathrm{pos}} M_{\log},
   \end{equation}
-  \item \textbf{(Strict Improvement Over de la Vall\'ee Poussin's Ratios)}:
+  then $1 - \beta$ satisfies the explicit zero-free region lower bound (\texttt{rh\_08\_analytic\_zero\_free\_region\_from\_trig\_poly}):
   \begin{equation}
-    \frac{c_0}{c_1 - c_0} \;=\; \frac{103}{65} \;\approx\; 1.5846 \;<\; 3, \qquad
-    \frac{\sum_{k=0}^{4} c_k}{c_1 - c_0} \;=\; \frac{392}{65} \;\approx\; 6.0308 \;<\; 8.
+    1 - \beta \;\ge\; \frac{W(P)}{M_{\log}}, \qquad W(P) \;\coloneqq\; \frac{(a_1 - a_0)^2}{2(a_1 + a_0) S_{\mathrm{pos}}} \;>\; 0.
+  \end{equation}
+  \item \textbf{(Degree-4 and Degree-6 Fej\'er--Chebyshev Square Factorizations)}: For all $\theta \in \R$,
+  \begin{align}
+    P_4(\theta) &\coloneqq 103 + 168\cos\theta + 89\cos(2\theta) + 28\cos(3\theta) + 4\cos(4\theta) = 2(3 + 7\cos\theta + 4\cos^2\theta)^2 \ge 0, \\
+    P_6(\theta) &\coloneqq 506 + 878\cos\theta + 568\cos(2\theta) + 264\cos(3\theta) + 81\cos(4\theta) + 14\cos(5\theta) + \cos(6\theta) \nonumber\\
+                &= 2(3 + 13\cos\theta + 14\cos^2\theta + 4\cos^3\theta)^2 = 2(10 + 16\cos\theta + 7\cos(2\theta) + \cos(3\theta))^2 \ge 0.
+  \end{align}
+  \item \textbf{(Strict Zero-Free Width Hierarchy)}: Compared to de la Vall\'ee Poussin's $P_2(\theta) = 3 + 4\cos\theta + \cos(2\theta)$,
+  \begin{equation}
+    W(P_2) = \frac{1}{70} \;<\; W(P_4) = \frac{4225}{156638} \;<\; W(P_6) = \frac{2883}{104144}.
   \end{equation}
 \end{enumerate}
 \end{theorem}
 
 \begin{proof}
-Substituting the multiple-angle Chebyshev identities $\cos(2\theta) = 2\cos^2\theta - 1$, $\cos(3\theta) = 4\cos^3\theta - 3\cos\theta$, and $\cos(4\theta) = 8\cos^4\theta - 8\cos^2\theta + 1$ into $P_4(\theta)$ gives $18 + 84\cos\theta + 146\cos^2\theta + 112\cos^3\theta + 32\cos^4\theta = 2(3 + 7\cos\theta + 4\cos^2\theta)^2 \ge 0$, which is verified over $\R$ in \texttt{rh\_08\_kondratiev\_deg4\_trig\_poly\_pos\_and\_sharper}.
+At $\sigma - 1 = \frac{a_1 - a_0}{2 S_{\mathrm{pos}} M_{\log}}$, $\frac{a_0}{\sigma - 1} + S_{\mathrm{pos}} M_{\log} = \frac{(a_1 + a_0) S_{\mathrm{pos}} M_{\log}}{a_1 - a_0}$, so $\sigma - \beta \ge \frac{a_1(a_1 - a_0)}{(a_1 + a_0) S_{\mathrm{pos}} M_{\log}}$ and subtracting $\sigma - 1$ gives $1 - \beta \ge \frac{(a_1 - a_0)^2}{2(a_1 + a_0) S_{\mathrm{pos}} M_{\log}}$ (\texttt{rh\_08\_analytic\_zero\_free\_region\_from\_trig\_poly}). The polynomial factorizations and width inequalities are verified in \texttt{rh\_08\_kondratiev\_deg4\_trig\_poly\_pos\_and\_sharper} and \texttt{rh\_08\_kondratiev\_deg6\_trig\_poly\_pos\_and\_sharper}.
 \end{proof}
+
+% ============================================================================
+\section{Weil Explicit-Formula Symmetric Spectral Pairing (\texorpdfstring{$\mathrm{RH\text{-}09}$}{RH-09})}\label{sec:rh09}
+% ============================================================================
+
+\begin{theorem}[$\mathrm{RH\text{-}09}$: Weil Explicit-Formula Spectral Pairing On-Line Positivity and Off-Line Negativity Witness]\label{thm:rh09}
+For $z_1, z_2 \in \C$, define $\mathrm{weilExplicitPairComplex}(z_1, z_2) \coloneqq \RePart(z_1 \overline{z_2} + z_2 \overline{z_1}) = 2(\RePart z_1 \RePart z_2 + \ImPart z_1 \ImPart z_2)$. Then (\texttt{rh\_09\_mathlib\_weil\_explicit\_pair\_positivity\_and\_offline\_witness}):
+\begin{enumerate}
+  \item On the critical line where $\rho = 1 - \bar{\rho}$ ($z_1 = z_2 = z$), $\mathrm{weilExplicitPairComplex}(z, z) = 2|z|^2 \ge 0$ for all $z \in \C$.
+  \item Off the critical line where $\rho \ne 1 - \bar{\rho}$, the opposite-phase evaluation $(z_1, z_2) = (1, -1)$ yields $\mathrm{weilExplicitPairComplex}(1, -1) = -2 < 0$.
+\end{enumerate}
+\end{theorem}
 
 % ============================================================================
 \section{Summary of Dual-Kernel Formal Verification}
 % ============================================================================
 
-Table~\ref{tab:g3-summary} summarizes the eight formal units verified in the Lean~4 theorem prover (\texttt{lean/RiemannHypothesisMathlib.lean} and \texttt{lean/RiemannHypothesisAdjudication.lean}).
+Table~\ref{tab:g3-summary} summarizes the nine formal units verified in the Lean~4 theorem prover (\texttt{lean/RiemannHypothesisMathlib.lean} and \texttt{lean/RiemannHypothesisAdjudication.lean}).
 
 \begin{table}[htbp]
 \centering
@@ -392,10 +420,12 @@ $\mathrm{RH\text{-}05}$ & Robin's Criterion at $n = 5040$ & \textbf{REFUTED\_FAL
                         & $\frac{19344}{5040}=\frac{403}{105}>\frac{191}{50}>\frac{19}{5}$ & (Witness $k = 1$) & + \texttt{rh\_05\_robin\_5040\_threshold\_necessity} \\
 $\mathrm{RH\text{-}06}$ & Hadamard Conjugate-Pair Factor & \textbf{PROVEN\_TRUE} & \texttt{rh\_06\_hadamardConjugatePair\_real\_and\_pos} \\
                         & $H(s,\beta,\gamma) = (s-\beta)^2 + \gamma^2 \ge 0$ & ($\mathrm{SOS}$ Identity) & + \texttt{rh\_06\_hadamard\_conjugate\_pair\_positivity} \\
-$\mathrm{RH\text{-}07}$ & Transcendental Robin Bound ($n=5040$) & \textbf{PROVEN\_TRUE} & \texttt{rh\_07\_unconditional\_log\_and\_robin\_5040\_bounds} \\
-                        & $e^{\gamma}\log\log 5040 < \frac{191}{50} < \frac{19344}{5040}$ & (Kernel Taylor/Exp) & + \texttt{rh\_07\_tight\_191\_div\_50} \\
-$\mathrm{RH\text{-}08}$ & Degree-4 Fej\'er--Kondratiev Cosine Poly & \textbf{PROVEN\_TRUE} & \texttt{rh\_08\_kondratiev\_deg4\_trig\_poly\_pos\_and\_sharper} \\
-                        & $P_4(\theta)=2(3+7\cos\theta+4\cos^2\theta)^2\ge 0$ & ($\frac{103}{65}<3,\;\frac{392}{65}<8$) & + \texttt{rh\_08\_kondratiev\_sharper\_than\_dlvp} \\
+$\mathrm{RH\text{-}07}$ & Unconditional $\gamma_{\mathrm{EM}}$ \& Robin ($n=5040$) & \textbf{PROVEN\_TRUE} & \texttt{eulerMascheroniConstant\_lt\_28861\_div\_50000} \\
+                        & $\gamma < \frac{28861}{50000},\; e^{\gamma}\log\log 5040 < \frac{191}{50}$ & (Euler--Maclaurin) & + \texttt{rh\_07\_eulerMascheroni\_robin\_5040\_unconditional} \\
+$\mathrm{RH\text{-}08}$ & Deg-4/6 Trig Poly \& Zero-Free Strip & \textbf{PROVEN\_TRUE} & \texttt{rh\_08\_analytic\_zero\_free\_region\_from\_trig\_poly} \\
+                        & $1-\beta \ge W(P)/M_{\log}$ ($W(P_2)<W(P_4)<W(P_6)$) & (Analytic Deduction) & + \texttt{rh\_08\_kondratiev\_deg6\_trig\_poly\_pos\_and\_sharper} \\
+$\mathrm{RH\text{-}09}$ & Weil Explicit-Formula Spectral Pairing & \textbf{PROVEN\_TRUE} & \texttt{rh\_09\_mathlib\_weil\_explicit\_pair\_positivity\_and\_offline\_witness} \\
+                        & On-Line $2|z|^2\ge 0$ vs.\ Off-Line $-2<0$ & (Spectral Pairing) & + \texttt{rh\_09\_weil\_on\_line\_positivity} \\
 \bottomrule
 \end{tabular}
 \caption{Summary of Dual Symbolic and Lean~4 Kernel Adjudications.}

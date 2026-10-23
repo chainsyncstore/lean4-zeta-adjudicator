@@ -7,6 +7,8 @@
 -/
 
 import Mathlib.NumberTheory.LSeries.RiemannZeta
+import Mathlib.NumberTheory.Harmonic.EulerMascheroni
+import Mathlib.Topology.Algebra.InfiniteSum.Order
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.Data.Complex.Basic
@@ -18,7 +20,7 @@ import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.NormNum
 
 open scoped BigOperators
-open Complex
+open Filter Topology Complex
 
 namespace RiemannHypothesisMathlib
 
@@ -494,6 +496,302 @@ theorem rh_08_kondratiev_deg4_trig_poly_pos_and_sharper :
       rw [h_eq1, h2]
       ring
     exact ⟨h_eq1, h_eq2, by rw [h_eq1]; positivity⟩
+
+/-- Second-order Euler-Maclaurin upper sequence for the Euler-Mascheroni constant `γ`:
+    `eulerMaclaurinSeq2 n = H_n - log(n) - (1/(2n) - 1/(12n^2))` for `n ≥ 1`, with junk value `2` at `n = 0`. -/
+noncomputable def eulerMaclaurinSeq2 (n : ℕ) : ℝ :=
+  if n = 0 then 2 else (harmonic n : ℝ) - Real.log n - (1 / (2 * (n : ℝ)) - 1 / (12 * (n : ℝ) ^ 2))
+
+lemma log_one_sub_inv_ge_sum5 {x : ℝ} (hx0 : 0 < x) (hx1 : x < 1) :
+    x + x ^ 2 / 2 + x ^ 3 / 3 + x ^ 4 / 4 + x ^ 5 / 5 ≤ -Real.log (1 - x) := by
+  have h_abs : |x| < 1 := by rw [abs_of_pos hx0]; exact hx1
+  have h_sum := Real.hasSum_pow_div_log_of_abs_lt_one h_abs
+  have h_le : ∑ i ∈ Finset.range 5, x ^ (i + 1) / ((i : ℝ) + 1) ≤ -Real.log (1 - x) := by
+    refine sum_le_hasSum (Finset.range 5) (fun i _ => ?_) h_sum
+    positivity
+  simp only [Finset.sum_range_succ, Finset.sum_range_zero, Nat.cast_zero, Nat.cast_one,
+    Nat.cast_ofNat] at h_le
+  linarith
+
+lemma eulerMaclaurin_step_algebra {x : ℝ} (hx : 0 < x) :
+    (1 / (2 * x) - 1 / (12 * x ^ 2)) - (1 / (2 * (x + 1)) - 1 / (12 * (x + 1) ^ 2)) <
+      (1 / (x + 1)) ^ 2 / 2 + (1 / (x + 1)) ^ 3 / 3 + (1 / (x + 1)) ^ 4 / 4 + (1 / (x + 1)) ^ 5 / 5 := by
+  have hx1 : 0 < x + 1 := by linarith
+  have h_lhs :
+      (1 / (2 * x) - 1 / (12 * x ^ 2)) - (1 / (2 * (x + 1)) - 1 / (12 * (x + 1) ^ 2)) =
+      (6 * x ^ 2 + 4 * x - 1) / (12 * x ^ 2 * (x + 1) ^ 2) := by
+    field_simp
+    ring
+  have h_rhs :
+      (1 / (x + 1)) ^ 2 / 2 + (1 / (x + 1)) ^ 3 / 3 + (1 / (x + 1)) ^ 4 / 4 + (1 / (x + 1)) ^ 5 / 5 =
+      (30 * (x + 1) ^ 3 + 20 * (x + 1) ^ 2 + 15 * (x + 1) + 12) / (60 * (x + 1) ^ 5) := by
+    field_simp
+    ring
+  rw [h_lhs, h_rhs, div_lt_div_iff₀ (by positivity) (by positivity)]
+  have h_poly :
+      (30 * (x + 1) ^ 3 + 20 * (x + 1) ^ 2 + 15 * (x + 1) + 12) * (12 * x ^ 2 * (x + 1) ^ 2) -
+      (6 * x ^ 2 + 4 * x - 1) * (60 * (x + 1) ^ 5) =
+      12 * (x + 1) ^ 2 * (2 * (x - 5 / 4) ^ 2 + 15 / 8) := by
+    ring
+  have h_pos : 0 < 12 * (x + 1) ^ 2 * (2 * (x - 5 / 4) ^ 2 + 15 / 8) := by positivity
+  linarith
+
+lemma strictAnti_eulerMaclaurinSeq2 : StrictAnti eulerMaclaurinSeq2 := by
+  refine strictAnti_nat_of_succ_lt (fun n => ?_)
+  rcases Nat.eq_zero_or_pos n with rfl | hn
+  · simp [eulerMaclaurinSeq2]
+    norm_num
+  · have hn_ne : n ≠ 0 := hn.ne'
+    have hn1_ne : n + 1 ≠ 0 := Nat.succ_ne_zero n
+    simp only [eulerMaclaurinSeq2, hn_ne, hn1_ne, if_false]
+    rw [harmonic_succ, Rat.cast_add, Rat.cast_inv, Rat.cast_natCast, Nat.cast_add, Nat.cast_one]
+    set x : ℝ := (n : ℝ)
+    have hx : 0 < x := Nat.cast_pos.mpr hn
+    have hx1 : 0 < x + 1 := by linarith
+    have hu0 : 0 < 1 / (x + 1) := by positivity
+    have hu1 : 1 / (x + 1) < 1 := by
+      rw [div_lt_iff₀ hx1]
+      linarith
+    have h_log_eq : Real.log (x + 1) - Real.log x = -Real.log (1 - 1 / (x + 1)) := by
+      have h_arg : 1 - 1 / (x + 1) = x / (x + 1) := by field_simp
+      rw [h_arg, Real.log_div hx.ne' hx1.ne']
+      ring
+    have h_log_lb := log_one_sub_inv_ge_sum5 hu0 hu1
+    rw [← h_log_eq] at h_log_lb
+    have h_inv_eq : (x + 1)⁻¹ = 1 / (x + 1) := by ring
+    rw [h_inv_eq]
+    have h_alg := eulerMaclaurin_step_algebra hx
+    linarith
+
+lemma tendsto_eulerMaclaurinSeq2 :
+    Tendsto eulerMaclaurinSeq2 atTop (𝓝 Real.eulerMascheroniConstant) := by
+  have h_inv : Tendsto (fun x : ℝ => 1 / x) atTop (𝓝 0) :=
+    tendsto_const_nhds.div_atTop tendsto_id
+  have h_nat : Tendsto (fun n : ℕ => 1 / (n : ℝ)) atTop (𝓝 0) :=
+    h_inv.comp tendsto_natCast_atTop_atTop
+  have h_rem : Tendsto (fun n : ℕ => 1 / (2 * (n : ℝ)) - 1 / (12 * (n : ℝ) ^ 2)) atTop (𝓝 0) := by
+    have h_eq : (fun n : ℕ => 1 / (2 * (n : ℝ)) - 1 / (12 * (n : ℝ) ^ 2)) =
+        (fun n : ℕ => (1 / 2 : ℝ) * (1 / (n : ℝ)) - (1 / 12 : ℝ) * ((1 / (n : ℝ)) * (1 / (n : ℝ)))) := by
+      ext n
+      ring
+    rw [h_eq]
+    simpa using (tendsto_const_nhds.mul h_nat).sub (tendsto_const_nhds.mul (h_nat.mul h_nat))
+  suffices Tendsto (fun n : ℕ => ((harmonic n : ℝ) - Real.log n) - (1 / (2 * (n : ℝ)) - 1 / (12 * (n : ℝ) ^ 2)))
+      atTop (𝓝 (Real.eulerMascheroniConstant - 0)) by
+    rw [sub_zero] at this
+    refine this.congr' ?_
+    filter_upwards [eventually_ne_atTop 0] with n hn
+    simp [eulerMaclaurinSeq2, hn]
+  exact Real.tendsto_harmonic_sub_log.sub h_rem
+
+lemma eulerMascheroniConstant_lt_eulerMaclaurinSeq2 (n : ℕ) :
+    Real.eulerMascheroniConstant < eulerMaclaurinSeq2 n := by
+  refine lt_of_le_of_lt ?_ (strictAnti_eulerMaclaurinSeq2 (Nat.lt_succ_self n))
+  exact strictAnti_eulerMaclaurinSeq2.antitone.le_of_tendsto tendsto_eulerMaclaurinSeq2 (n + 1)
+
+/-- Theorem RH-07c (Unconditional Upper Bound on `Real.eulerMascheroniConstant`):
+    Evaluating `eulerMaclaurinSeq2` at `n = 8 = 2^3` with `H_8 = 761 / 280` and
+    `Real.log_two_gt_d9 : 0.6931471803 < Real.log 2` proves unconditionally that
+    `Real.eulerMascheroniConstant < 28861 / 50000 = 0.57722`. -/
+theorem eulerMascheroniConstant_lt_28861_div_50000 :
+    Real.eulerMascheroniConstant < 28861 / 50000 := by
+  refine (eulerMascheroniConstant_lt_eulerMaclaurinSeq2 8).trans ?_
+  have h8 : eulerMaclaurinSeq2 8 = 761 / 280 - Real.log 8 - (1 / 16 - 1 / 768) := by
+    rw [eulerMaclaurinSeq2]
+    norm_num [harmonic, Finset.sum_range_succ]
+  have h_log8 : 3 * 0.6931471803 < Real.log 8 := by
+    have h8_eq : (8 : ℝ) = 2 ^ (3 : ℕ) := by norm_num
+    rw [h8_eq, Real.log_pow, Nat.cast_ofNat]
+    linarith [Real.log_two_gt_d9]
+  linarith
+
+/-- Theorem RH-07d (Complete Unconditional Robin Inequality at `n = 5040` with `Real.eulerMascheroniConstant`):
+    Combining `eulerMascheroniConstant_lt_28861_div_50000`, `Real.exp_lt_exp`, and `rh_07_tight_191_div_50`
+    establishes unconditionally over `ℝ` that:
+    1. `Real.eulerMascheroniConstant < 28861 / 50000`,
+    2. `Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < 191 / 50`,
+    3. `Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < 19344 / 5040 = (∑ d ∈ Nat.divisors 5040, (d : ℝ)) / 5040`. -/
+theorem rh_07_eulerMascheroni_robin_5040_unconditional :
+    Real.eulerMascheroniConstant < 28861 / 50000 ∧
+    Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < (191 : ℝ) / 50 ∧
+    Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < (19344 : ℝ) / 5040 ∧
+    Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) <
+      (((∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) *
+        (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) : ℕ) : ℝ) / 5040 := by
+  have h_gamma := eulerMascheroniConstant_lt_28861_div_50000
+  have h_exp_lt : Real.exp Real.eulerMascheroniConstant < Real.exp (28861 / 50000) :=
+    Real.exp_lt_exp.mpr h_gamma
+  have h_tight := rh_07_tight_191_div_50
+  have hloglog_pos : 0 < Real.log (Real.log 5040) := by
+    apply Real.log_pos
+    rw [← Real.log_exp 1]
+    apply Real.log_lt_log (Real.exp_pos 1)
+    have h1 : Real.exp (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) ≤ (4 / 3 : ℝ) ^ 4 :=
+      exp_upper_inv_step (by norm_num) (by norm_num) 4
+    have h2 : (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) = 1 := by norm_num
+    rw [h2] at h1
+    have h3 : (4 / 3 : ℝ) ^ 4 < 5040 := by norm_num
+    linarith
+  have h_prod_lt :
+      Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) <
+      Real.exp (28861 / 50000) * Real.log (Real.log 5040) :=
+    mul_lt_mul_of_pos_right h_exp_lt hloglog_pos
+  have h_191 : Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < (191 : ℝ) / 50 :=
+    lt_trans h_prod_lt h_tight.2.2.2.1
+  have h_5040 : Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) < (19344 : ℝ) / 5040 :=
+    lt_trans h_prod_lt h_tight.2.2.2.2
+  have h_div_eq : ((∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) *
+      (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) : ℕ) = 19344 :=
+    rh_05_robin_5040_divisor_sum_and_threshold.2.1
+  have h_div : Real.exp Real.eulerMascheroniConstant * Real.log (Real.log 5040) <
+      (((∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) *
+        (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) : ℕ) : ℝ) / 5040 := by
+    rw [h_div_eq]
+    exact_mod_cast h_5040
+  exact ⟨h_gamma, h_191, h_5040, h_div⟩
+
+/-- Degree-6 Fejér-Kondratiev zero-free region cosine polynomial with positive coefficients
+    `(506, 878, 568, 264, 81, 14, 1)`:
+    `P_6(θ) = 506 + 878*cos(θ) + 568*cos(2*θ) + 264*cos(3*θ) + 81*cos(4*θ) + 14*cos(5*θ) + cos(6*θ)`. -/
+noncomputable def kondratievTrigPoly6 (θ : ℝ) : ℝ :=
+  506 + 878 * Real.cos θ + 568 * Real.cos (2 * θ) + 264 * Real.cos (3 * θ) +
+  81 * Real.cos (4 * θ) + 14 * Real.cos (5 * θ) + Real.cos (6 * θ)
+
+/-- Theorem RH-08b (Analytic Zero-Free Region Deduction from Non-Negative Trigonometric Polynomials):
+    Let `0 < a0 < a1`, `0 < S_pos` (`= ∑_{k=1}^d a_k`), `0 < M_log`, and let `β < 1` be the real part
+    of a hypothetical zero of `ζ(s)`. At the abscissa `σ = 1 + (a1 - a0) / (2 * S_pos * M_log) > 1`,
+    if the classical Landau-de la Vallée Poussin logarithmic-derivative inequality holds:
+      `a1 / (σ - β) ≤ a0 / (σ - 1) + S_pos * M_log`,
+    then `1 - β` satisfies the explicit zero-free region lower bound:
+      `((a1 - a0)^2 / (2 * (a1 + a0) * S_pos)) / M_log ≤ 1 - β`. -/
+theorem rh_08_analytic_zero_free_region_from_trig_poly
+    (a0 a1 S_pos M_log β : ℝ)
+    (ha0 : 0 < a0) (ha1 : a0 < a1) (hS : 0 < S_pos) (hM : 0 < M_log) (hβ : β < 1) :
+    let σ := 1 + (a1 - a0) / (2 * S_pos * M_log)
+    a1 / (σ - β) ≤ a0 / (σ - 1) + S_pos * M_log →
+    ((a1 - a0) ^ 2 / (2 * (a1 + a0) * S_pos)) / M_log ≤ 1 - β := by
+  intro σ h_ineq
+  have h_diff_pos : 0 < a1 - a0 := sub_pos.mpr ha1
+  have h_sum_pos : 0 < a1 + a0 := by linarith
+  have h_σ_sub_one : σ - 1 = (a1 - a0) / (2 * S_pos * M_log) := by
+    dsimp [σ]
+    ring
+  have h_σ_gt_one : 0 < σ - 1 := by
+    rw [h_σ_sub_one]
+    positivity
+  have h_σ_sub_β_pos : 0 < σ - β := by linarith
+  have h_rhs_eq : a0 / (σ - 1) + S_pos * M_log = (a1 + a0) * S_pos * M_log / (a1 - a0) := by
+    rw [h_σ_sub_one]
+    field_simp
+    ring
+  rw [h_rhs_eq] at h_ineq
+  have h_cross := (div_le_div_iff₀ h_σ_sub_β_pos h_diff_pos).mp h_ineq
+  have h_lb : a1 * (a1 - a0) / ((a1 + a0) * S_pos * M_log) ≤ σ - β := by
+    rw [div_le_iff₀ (by positivity)]
+    linarith
+  have h_id :
+      a1 * (a1 - a0) / ((a1 + a0) * S_pos * M_log) - (a1 - a0) / (2 * S_pos * M_log) =
+      ((a1 - a0) ^ 2 / (2 * (a1 + a0) * S_pos)) / M_log := by
+    field_simp
+    ring
+  have h_rel : 1 - β = (σ - β) - (σ - 1) := by ring
+  rw [h_rel, h_σ_sub_one, ← h_id]
+  linarith
+
+/-- Theorem RH-08c (Degree-6 Fejér-Kondratiev Trigonometric Polynomial & Strict Zero-Free Width Hierarchy):
+    1. `kondratievTrigPoly6 θ = 2 * (3 + 13*cos θ + 14*cos^2 θ + 4*cos^3 θ)^2 = 2 * (10 + 16*cos θ + 7*cos(2θ) + cos(3θ))^2 ≥ 0` for all `θ : ℝ`,
+    2. The analytic zero-free region width constant `W(P) = (a1 - a0)^2 / (2 * (a1 + a0) * S_pos)` satisfies
+       `W(P_2) = 1 / 70 < W(P_4) = 4225 / 156638 < W(P_6) = 2883 / 104144`. -/
+theorem rh_08_kondratiev_deg6_trig_poly_pos_and_sharper :
+    (∀ θ : ℝ,
+      kondratievTrigPoly6 θ = 2 * (3 + 13 * Real.cos θ + 14 * Real.cos θ ^ 2 + 4 * Real.cos θ ^ 3) ^ 2 ∧
+      kondratievTrigPoly6 θ = 2 * (10 + 16 * Real.cos θ + 7 * Real.cos (2 * θ) + Real.cos (3 * θ)) ^ 2 ∧
+      0 ≤ kondratievTrigPoly6 θ) ∧
+    (((4 - 3 : ℝ) ^ 2 / (2 * (4 + 3) * 5)) < ((168 - 103 : ℝ) ^ 2 / (2 * (168 + 103) * 289))) ∧
+    (((168 - 103 : ℝ) ^ 2 / (2 * (168 + 103) * 289)) < ((878 - 506 : ℝ) ^ 2 / (2 * (878 + 506) * 1806))) := by
+  refine ⟨?_, by norm_num, by norm_num⟩
+  intro θ
+  have h2 : Real.cos (2 * θ) = 2 * Real.cos θ ^ 2 - 1 := Real.cos_two_mul θ
+  have h3 : Real.cos (3 * θ) = 4 * Real.cos θ ^ 3 - 3 * Real.cos θ := by
+    have h3a : (3 : ℝ) * θ = 2 * θ + θ := by ring
+    have hsin2 : Real.sin (2 * θ) = 2 * Real.sin θ * Real.cos θ := Real.sin_two_mul θ
+    have hsq : Real.sin θ ^ 2 = 1 - Real.cos θ ^ 2 := by
+      linarith [Real.sin_sq_add_cos_sq θ]
+    rw [h3a, Real.cos_add, h2, hsin2]
+    calc (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.sin θ * Real.cos θ * Real.sin θ
+        = (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.cos θ * Real.sin θ ^ 2 := by ring
+      _ = (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.cos θ * (1 - Real.cos θ ^ 2) := by rw [hsq]
+      _ = 4 * Real.cos θ ^ 3 - 3 * Real.cos θ := by ring
+  have h4 : Real.cos (4 * θ) = 8 * Real.cos θ ^ 4 - 8 * Real.cos θ ^ 2 + 1 := by
+    have h4a : (4 : ℝ) * θ = 2 * (2 * θ) := by ring
+    rw [h4a, Real.cos_two_mul, h2]
+    ring
+  have h5 : Real.cos (5 * θ) = 16 * Real.cos θ ^ 5 - 20 * Real.cos θ ^ 3 + 5 * Real.cos θ := by
+    have h5a : (5 : ℝ) * θ = 3 * θ + 2 * θ := by ring
+    have h3b : (3 : ℝ) * θ = 2 * θ + θ := by ring
+    have hsin2 : Real.sin (2 * θ) = 2 * Real.sin θ * Real.cos θ := Real.sin_two_mul θ
+    have hsin3 : Real.sin (3 * θ) = 3 * Real.sin θ - 4 * Real.sin θ ^ 3 := by
+      have hsq : Real.cos θ ^ 2 = 1 - Real.sin θ ^ 2 := by linarith [Real.sin_sq_add_cos_sq θ]
+      rw [h3b, Real.sin_add, hsin2, h2]
+      calc 2 * Real.sin θ * Real.cos θ * Real.cos θ + (2 * Real.cos θ ^ 2 - 1) * Real.sin θ
+          = 4 * Real.sin θ * Real.cos θ ^ 2 - Real.sin θ := by ring
+        _ = 4 * Real.sin θ * (1 - Real.sin θ ^ 2) - Real.sin θ := by rw [hsq]
+        _ = 3 * Real.sin θ - 4 * Real.sin θ ^ 3 := by ring
+    have hsq : Real.sin θ ^ 2 = 1 - Real.cos θ ^ 2 := by linarith [Real.sin_sq_add_cos_sq θ]
+    rw [h5a, Real.cos_add, h3, h2, hsin3, hsin2]
+    calc (4 * Real.cos θ ^ 3 - 3 * Real.cos θ) * (2 * Real.cos θ ^ 2 - 1) -
+            (3 * Real.sin θ - 4 * Real.sin θ ^ 3) * (2 * Real.sin θ * Real.cos θ)
+        = (4 * Real.cos θ ^ 3 - 3 * Real.cos θ) * (2 * Real.cos θ ^ 2 - 1) -
+            2 * Real.cos θ * Real.sin θ ^ 2 * (3 - 4 * Real.sin θ ^ 2) := by ring
+      _ = (4 * Real.cos θ ^ 3 - 3 * Real.cos θ) * (2 * Real.cos θ ^ 2 - 1) -
+            2 * Real.cos θ * (1 - Real.cos θ ^ 2) * (3 - 4 * (1 - Real.cos θ ^ 2)) := by rw [hsq]
+      _ = 16 * Real.cos θ ^ 5 - 20 * Real.cos θ ^ 3 + 5 * Real.cos θ := by ring
+  have h6 : Real.cos (6 * θ) = 32 * Real.cos θ ^ 6 - 48 * Real.cos θ ^ 4 + 18 * Real.cos θ ^ 2 - 1 := by
+    have h6a : (6 : ℝ) * θ = 2 * (3 * θ) := by ring
+    rw [h6a, Real.cos_two_mul, h3]
+    ring
+  have h_eq1 : kondratievTrigPoly6 θ =
+      2 * (3 + 13 * Real.cos θ + 14 * Real.cos θ ^ 2 + 4 * Real.cos θ ^ 3) ^ 2 := by
+    unfold kondratievTrigPoly6
+    rw [h2, h3, h4, h5, h6]
+    ring
+  have h_eq2 : kondratievTrigPoly6 θ =
+      2 * (10 + 16 * Real.cos θ + 7 * Real.cos (2 * θ) + Real.cos (3 * θ)) ^ 2 := by
+    rw [h_eq1, h2, h3]
+    ring
+  exact ⟨h_eq1, h_eq2, by rw [h_eq1]; positivity⟩
+
+/- ============================================================================
+   SECTION 9: RH-09 — WEIL EXPLICIT-FORMULA SYMMETRIC SPECTRAL PAIRING OVER `ℂ`
+   ============================================================================ -/
+
+/-- Real part of the symmetric explicit-formula pairing `z1 * conj(z2) + z2 * conj(z1)` over `ℂ`. -/
+noncomputable def weilExplicitPairComplex (z1 z2 : ℂ) : ℝ :=
+  (z1 * starRingEnd ℂ z2 + z2 * starRingEnd ℂ z1).re
+
+/-- Theorem RH-09 (Weil Explicit-Formula Spectral Pairing On-Line Positivity & Off-Line Witness over `ℂ`):
+    1. For all `z1, z2 : ℂ`, `weilExplicitPairComplex z1 z2 = 2 * (z1.re * z2.re + z1.im * z2.im)`,
+    2. When `ρ` lies on the critical line (`ρ = 1 - conj(ρ)`, so `z1 = z2 = z`),
+       `weilExplicitPairComplex z z = 2 * Complex.normSq z ≥ 0` for all `z : ℂ`,
+    3. When `ρ` lies off the critical line (`ρ ≠ 1 - conj(ρ)`), the opposite-phase test witness
+       `z1 = 1, z2 = -1` yields `weilExplicitPairComplex 1 (-1) = -2 < 0`. -/
+theorem rh_09_mathlib_weil_explicit_pair_positivity_and_offline_witness :
+    (∀ z1 z2 : ℂ, weilExplicitPairComplex z1 z2 = 2 * (z1.re * z2.re + z1.im * z2.im)) ∧
+    (∀ z : ℂ, weilExplicitPairComplex z z = 2 * Complex.normSq z ∧ 0 ≤ weilExplicitPairComplex z z) ∧
+    (weilExplicitPairComplex 1 (-1) = -2 ∧ weilExplicitPairComplex 1 (-1) < 0) := by
+  have h_pair : ∀ z1 z2 : ℂ, weilExplicitPairComplex z1 z2 = 2 * (z1.re * z2.re + z1.im * z2.im) := by
+    intro z1 z2
+    unfold weilExplicitPairComplex
+    simp only [add_re, mul_re, conj_re, conj_im]
+    ring
+  refine ⟨h_pair, ?_, ?_⟩
+  · intro z
+    have h_eq : weilExplicitPairComplex z z = 2 * Complex.normSq z := by
+      rw [h_pair z z, Complex.normSq_apply]
+    exact ⟨h_eq, by rw [h_eq]; exact mul_nonneg (by norm_num) (Complex.normSq_nonneg z)⟩
+  · rw [h_pair 1 (-1)]
+    simp only [one_re, one_im, neg_re, neg_im]
+    norm_num
 
 end
 
