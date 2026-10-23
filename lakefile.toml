@@ -1,0 +1,18 @@
+name = "riemann-hypothesis-lean4-adjudicator"
+version = "0.2.0"
+defaultTargets = ["RiemannHypothesisMathlib", "RiemannHypothesisAdjudication"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.15.0"
+
+[[lean_lib]]
+name = "RiemannHypothesisMathlib"
+srcDir = "lean"
+roots = ["RiemannHypothesisMathlib"]
+
+[[lean_lib]]
+name = "RiemannHypothesisAdjudication"
+srcDir = "lean"
+roots = ["RiemannHypothesisAdjudication"]
