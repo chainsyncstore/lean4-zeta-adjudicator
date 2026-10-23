@@ -34,7 +34,7 @@ This repository provides machine-checked **Lean 4.15.0** formalizations of symme
 - **`RH-04` (Refutation of Universal Positivity of $\operatorname{Re}(\rho^2 + (1-\bar{\rho})^2)$ over $\mathbb{C}$)**:
   Proves the exact complex expansion `Re(ρ^2 + (1 - star ρ)^2) = 2 * ρ.re^2 - 2 * ρ.re + 1 - 2 * ρ.im^2` and shows that at $\rho = \frac{1}{2} + i$ on the critical line, `symSquareRealPart (1/2 + I) = -3/2 < 0`.
 - **`RH-05` (Necessity of the $n > 5040$ Threshold in Robin's Divisor-Sum Criterion via `Nat.divisors`)**:
-  Using Mathlib's `Nat.divisors` on the prime-power factors of $5040 = 16 \cdot 9 \cdot 5 \cdot 7$, verifies $\sigma(5040) = 19344$, proves the exact reduced fraction `(19344 : ℝ) / 5040 = 403 / 105` (and `≠ 134 / 35`), and verifies `(19 : ℝ) / 5 < (191 : ℝ) / 50 ∧ (191 : ℝ) / 50 < (19344 : ℝ) / 5040` (exceeding the rational upper bound $\frac{191}{50} = 3.82$ on $e^{\gamma}\log\log 5040 \approx 3.81743$).
+  Using Mathlib's `Nat.divisors` on the prime-power factors of $5040 = 16 \cdot 9 \cdot 5 \cdot 7$, verifies $\sigma(5040) = 19344$, proves the exact reduced fraction `(19344 : ℝ) / 5040 = 403 / 105` (and `≠ 134 / 35`), proves `(19 : ℝ) / 5 < (191 : ℝ) / 50 ∧ (191 : ℝ) / 50 < (19344 : ℝ) / 5040`, and proves the conditional implication `∀ c_robin : ℝ, c_robin ≤ 191 / 50 → c_robin < 19344 / 5040`. (Note: the transcendental bound $e^{\gamma}\log\log 5040 \approx 3.816877288 < 3.82 = \frac{191}{50}$, with $\log\log 5040 \approx 2.143021951$, is an external analytic interval bound separate from the Lean rational certificate.)
 
 ---
 

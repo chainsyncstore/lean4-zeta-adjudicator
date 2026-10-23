@@ -224,7 +224,10 @@ theorem rh_04_symSquareRealPart_refuted_on_critical_line :
     `(∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) * (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) = 19344`,
     the exact reduced rational ratio is `(19344 : ℝ) / 5040 = 403 / 105` (refuting the
     incorrect reduction `134 / 35 = 402 / 105`), and `(403 : ℝ) / 105` strictly exceeds both
-    `19 / 5 = 3.80` and the rational upper bound `191 / 50 = 3.82` on `e^γ * log(log(5040)) ≈ 3.81743`. -/
+    `19 / 5 = 3.80` and `191 / 50 = 3.82`. Consequently, for any real threshold `c_robin : ℝ`
+    satisfying the external transcendental interval bound `c_robin ≤ 191 / 50`
+    (where numerically `e^γ * log(log(5040)) ≈ 3.816877288 < 3.82 = 191 / 50`),
+    we have `c_robin < (19344 : ℝ) / 5040`. -/
 theorem rh_05_robin_5040_divisor_sum_and_threshold :
     16 * 9 * 5 * 7 = 5040 ∧
     (∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) *
@@ -233,8 +236,11 @@ theorem rh_05_robin_5040_divisor_sum_and_threshold :
     ((19344 : ℝ) / 5040 ≠ (134 : ℝ) / 35) ∧
     ((19 : ℝ) / 5 < (191 : ℝ) / 50) ∧
     ((191 : ℝ) / 50 < (19344 : ℝ) / 5040) ∧
-    ((19 : ℝ) / 5 < (19344 : ℝ) / 5040) := by
-  refine ⟨by norm_num, by decide, by norm_num, by norm_num, by norm_num, by norm_num, by norm_num⟩
+    ((19 : ℝ) / 5 < (19344 : ℝ) / 5040) ∧
+    (∀ c_robin : ℝ, c_robin ≤ (191 : ℝ) / 50 → c_robin < (19344 : ℝ) / 5040) := by
+  refine ⟨by norm_num, by decide, by norm_num, by norm_num, by norm_num, by norm_num, by norm_num, ?_⟩
+  intro c_robin hc
+  linarith
 
 /- ============================================================================
    SECTION 6: RH-06 — HADAMARD CONJUGATE-PAIR QUADRATIC FACTOR POSITIVITY OVER `ℂ`

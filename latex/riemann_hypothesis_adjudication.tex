@@ -282,11 +282,11 @@ Robin (1984) proved that the Riemann Hypothesis is equivalent to the divisor-sum
 \begin{equation}\label{eq:robin}
   \sigma(n) \;<\; e^{\gamma_{\mathrm{EM}}} n \log\log n \qquad \text{for all } n > 5040,
 \end{equation}
-where $\sigma(n) = \sum_{d \mid n} d$ and $\gamma_{\mathrm{EM}} \approx 0.5772156649$ is the Euler--Mascheroni constant ($e^{\gamma_{\mathrm{EM}}} \approx 1.781072418$). At $n = 5040$, $\log\log(5040) \approx 2.143389$, so
+where $\sigma(n) = \sum_{d \mid n} d$ and $\gamma_{\mathrm{EM}} \approx 0.5772156649$ is the Euler--Mascheroni constant ($e^{\gamma_{\mathrm{EM}}} \approx 1.781072418$). At $n = 5040$, $\log\log(5040) \approx 2.143021951$, so an external transcendental interval calculation gives
 \[
-  \frac{19}{5} \;=\; 3.80 \;<\; e^{\gamma_{\mathrm{EM}}}\log\log(5040) \;\approx\; 3.81743 \;<\; 3.82 \;=\; \frac{191}{50}.
+  \frac{19}{5} \;=\; 3.80 \;<\; e^{\gamma_{\mathrm{EM}}}\log\log(5040) \;\approx\; 3.816877288 \;<\; 3.82 \;=\; \frac{191}{50}.
 \]
-We formally verify that $\frac{\sigma(5040)}{5040} = \frac{19344}{5040} = \frac{403}{105} \approx 3.838095 > \frac{191}{50} > \frac{19}{5}$, confirming that the threshold $n > 5040$ cannot be omitted.
+In Lean~4, we formally certify the exact divisor sum $\sigma(5040) = 19344$, the exact reduced rational ratio $\frac{\sigma(5040)}{5040} = \frac{19344}{5040} = \frac{403}{105} \approx 3.8380952$, the rational comparisons $\frac{19}{5} < \frac{191}{50} < \frac{403}{105}$, and the conditional bridge $\forall c_{\mathrm{robin}} \le \frac{191}{50},\; c_{\mathrm{robin}} < \frac{19344}{5040}$. (Note: the transcendental inequality $e^{\gamma_{\mathrm{EM}}}\log\log(5040) \le \frac{191}{50}$ is justified by external rational interval arithmetic and is separate from the Lean certificate.)
 
 \begin{candidate}[$\mathrm{RH\text{-}05}$ --- FALSE]\label{cand:rh05}
 At the colossally abundant boundary integer $n = 5040 = 7! = 2^4 \cdot 3^2 \cdot 5 \cdot 7$, the normalized divisor ratio satisfies $\frac{\sigma(5040)}{5040} \le \frac{191}{50} = 3.82$ (or $\le \frac{19}{5} = 3.80$), so the scaled margin $M(k) = (19 \cdot 5040 - 5\sigma(5040))k^2 \ge 0$ for all $k \in \Z$.
@@ -308,11 +308,11 @@ Since $\gcd(19344, 5040) = 48$, the exact reduced rational fraction is $\frac{19
 \begin{equation}
   M(1) \;=\; 19 \cdot 5040 - 5 \cdot 19344 \;=\; 95760 - 96720 \;=\; -960 \;<\; 0,
 \end{equation}
-and comparing against the rational upper bound $\frac{191}{50} = 3.82 > e^{\gamma_{\mathrm{EM}}}\log\log(5040)$ gives $191 \times 105 = 20055 < 20150 = 50 \times 403$, i.e.,
+and comparing against the rational upper bound $\frac{191}{50} = 3.82$ gives $191 \times 105 = 20055 < 20150 = 50 \times 403$, i.e.,
 \begin{equation}
-  \frac{\sigma(5040)}{5040} \;=\; \frac{19344}{5040} \;=\; \frac{403}{105} \;\approx\; 3.8380952 \;>\; \frac{191}{50} \;=\; 3.82 \;>\; 3.81743 \;\approx\; e^{\gamma_{\mathrm{EM}}}\log\log(5040) \;>\; \frac{19}{5} \;=\; 3.80.
+  \frac{\sigma(5040)}{5040} \;=\; \frac{19344}{5040} \;=\; \frac{403}{105} \;\approx\; 3.8380952 \;>\; \frac{191}{50} \;=\; 3.82 \;>\; \frac{19}{5} \;=\; 3.80.
 \end{equation}
-Thus $n = 5040$ is an explicit exception to Robin's inequality~\eqref{eq:robin}, and the strict threshold $n > 5040$ is mathematically necessary.
+Combined with the external interval bound $e^{\gamma_{\mathrm{EM}}}\log\log(5040) \approx 3.816877288 < \frac{191}{50}$, this confirms that $n = 5040$ is an exception to Robin's inequality~\eqref{eq:robin} and the strict threshold $n > 5040$ is necessary.
 \end{counterexample}
 
 % ============================================================================
