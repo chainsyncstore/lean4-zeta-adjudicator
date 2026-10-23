@@ -1,4 +1,4 @@
-# Lean 4 formalizations of symmetric off-line zero configurations and analytic counterexamples to symmetry-only shortcut lemmas.
+# lean4-zeta-adjudicator
 
 [![Lean 4.15.0](https://img.shields.io/badge/Lean-v4.15.0-blue)](./lean/RiemannHypothesisMathlib.lean) [![Mathlib v4.15.0](https://img.shields.io/badge/Mathlib-v4.15.0-purple)](./lean/RiemannHypothesisMathlib.lean) [![Zero Sorrys](https://img.shields.io/badge/sorry-0-brightgreen)](./lean/RiemannHypothesisMathlib.lean) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
