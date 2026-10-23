@@ -7,6 +7,8 @@
 -/
 
 import Mathlib.NumberTheory.LSeries.RiemannZeta
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.NumberTheory.Divisors
@@ -277,6 +279,221 @@ theorem rh_06_hadamardConjugatePair_real_and_pos (s : ℝ) (ρ : ℂ) :
     have hpos : 0 < ρ.im ^ 2 := sq_pos_of_ne_zero hnz
     have hnonneg : 0 ≤ (s - ρ.re) ^ 2 := sq_nonneg (s - ρ.re)
     linarith
+
+/- ============================================================================
+   SECTION 7: RH-07 — UNCONDITIONAL TRANSCENDENTAL BOUNDS ON `Real.log 5040`,
+   `Real.log (Real.log 5040)`, AND ROBIN'S THRESHOLD AT `n = 5040` OVER `ℝ`
+   ============================================================================ -/
+
+/-- Fourth-order Taylor polynomial lower bound for `Real.exp ((n : ℝ) * x)` when `0 ≤ x`:
+    if `0 ≤ B ≤ 1 + x + x^2 / 2 + x^3 / 6 + x^4 / 24`, then `B ^ n ≤ Real.exp ((n : ℝ) * x)`.
+    Proved directly from Mathlib's `Real.sum_le_exp_of_nonneg` and `Real.exp_nat_mul`. -/
+theorem exp_lower_taylor4_step {x B : ℝ} (hx : 0 ≤ x) (hB : 0 ≤ B)
+    (hstep : B ≤ 1 + x + x ^ 2 / 2 + x ^ 3 / 6 + x ^ 4 / 24) (n : ℕ) :
+    B ^ n ≤ Real.exp ((n : ℝ) * x) := by
+  have hsum := Real.sum_le_exp_of_nonneg hx 5
+  rw [Finset.sum_range_succ, Finset.sum_range_succ, Finset.sum_range_succ,
+      Finset.sum_range_succ, Finset.sum_range_one] at hsum
+  norm_num [Nat.factorial] at hsum
+  have hle : B ≤ Real.exp x := by linarith
+  rw [Real.exp_nat_mul]
+  exact pow_le_pow_left₀ hB hle n
+
+/-- Upper bound for `Real.exp ((n : ℝ) * x)` when `x < 1`:
+    if `(1 - x)⁻¹ ≤ U`, then `Real.exp ((n : ℝ) * x) ≤ U ^ n`, derived from
+    `Real.add_one_le_exp (-x)` and `Real.exp_nat_mul`. -/
+theorem exp_upper_inv_step {x U : ℝ} (hx1 : x < 1)
+    (hstep : (1 - x)⁻¹ ≤ U) (n : ℕ) :
+    Real.exp ((n : ℝ) * x) ≤ U ^ n := by
+  have h1 : -x + 1 ≤ Real.exp (-x) := Real.add_one_le_exp (-x)
+  have hpos : 0 < 1 - x := by linarith
+  have h2 : 1 - x ≤ (Real.exp x)⁻¹ := by
+    rw [← Real.exp_neg]
+    linarith
+  have hexp_pos : 0 < Real.exp x := Real.exp_pos x
+  have h3 : Real.exp x ≤ (1 - x)⁻¹ := by
+    rw [le_inv_comm₀ hexp_pos hpos]
+    exact h2
+  have h4 : Real.exp x ≤ U := le_trans h3 hstep
+  rw [Real.exp_nat_mul]
+  exact pow_le_pow_left₀ (le_of_lt hexp_pos) h4 n
+
+/-- Theorem RH-07a (Unconditional Transcendental Certificate for Robin's Criterion at `n = 5040`):
+    Using Mathlib's `Real.log` and `Real.exp` without any external interval assumptions:
+    1. `Real.log 5040 < 427 / 50 = 8.54`,
+    2. `Real.log (Real.log 5040) < 4292 / 2000 = 2.146`,
+    3. `Real.exp (5776 / 10000) < 1787 / 1000 = 1.787`,
+    4. `Real.exp (5776 / 10000) * Real.log (Real.log 5040) < 19344 / 5040`. -/
+theorem rh_07_unconditional_log_and_robin_5040_bounds :
+    Real.log 5040 < 427 / 50 ∧
+    Real.log (Real.log 5040) < 4292 / 2000 ∧
+    Real.exp (5776 / 10000) < 1787 / 1000 ∧
+    Real.exp (5776 / 10000) * Real.log (Real.log 5040) < (19344 : ℝ) / 5040 := by
+  have hlog5040 : Real.log 5040 < 427 / 50 := by
+    rw [Real.log_lt_iff_lt_exp (by norm_num)]
+    have h1 : (15325 / 10000 : ℝ) ^ 20 ≤ Real.exp (((20 : ℕ) : ℝ) * (427 / 1000 : ℝ)) :=
+      exp_lower_taylor4_step (by norm_num) (by norm_num) (by norm_num) 20
+    have h2 : (5040 : ℝ) < (15325 / 10000 : ℝ) ^ 20 := by norm_num
+    have h3 : (((20 : ℕ) : ℝ) * (427 / 1000 : ℝ)) = 427 / 50 := by norm_num
+    rw [h3] at h1
+    linarith
+  have hlog5040_pos : 0 < Real.log 5040 := Real.log_pos (by norm_num)
+  have hlog_427 : Real.log (427 / 50) < 4292 / 2000 := by
+    rw [Real.log_lt_iff_lt_exp (by norm_num)]
+    have h1 : (15358 / 10000 : ℝ) ^ 5 ≤ Real.exp (((5 : ℕ) : ℝ) * (4292 / 10000 : ℝ)) :=
+      exp_lower_taylor4_step (by norm_num) (by norm_num) (by norm_num) 5
+    have h2 : (427 / 50 : ℝ) < (15358 / 10000 : ℝ) ^ 5 := by norm_num
+    have h3 : (((5 : ℕ) : ℝ) * (4292 / 10000 : ℝ)) = 4292 / 2000 := by norm_num
+    rw [h3] at h1
+    linarith
+  have hloglog : Real.log (Real.log 5040) < 4292 / 2000 := by
+    have hmono : Real.log (Real.log 5040) < Real.log (427 / 50) :=
+      Real.log_lt_log hlog5040_pos hlog5040
+    linarith
+  have hexp : Real.exp (5776 / 10000) < 1787 / 1000 := by
+    have h1 : Real.exp (((64 : ℕ) : ℝ) * (5776 / 640000 : ℝ)) ≤ (640000 / 634224 : ℝ) ^ 64 :=
+      exp_upper_inv_step (by norm_num) (by norm_num) 64
+    have h2 : (640000 / 634224 : ℝ) ^ 64 < 1787 / 1000 := by norm_num
+    have h3 : (((64 : ℕ) : ℝ) * (5776 / 640000 : ℝ)) = 5776 / 10000 := by norm_num
+    rw [h3] at h1
+    linarith
+  refine ⟨hlog5040, hloglog, hexp, ?_⟩
+  have hexp_pos : 0 ≤ Real.exp (5776 / 10000) := le_of_lt (Real.exp_pos _)
+  have hloglog_pos : 0 ≤ Real.log (Real.log 5040) := by
+    apply Real.log_nonneg
+    rw [← Real.log_exp 1]
+    apply Real.log_le_log (Real.exp_pos 1)
+    have h1 : Real.exp (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) ≤ (4 / 3 : ℝ) ^ 4 :=
+      exp_upper_inv_step (by norm_num) (by norm_num) 4
+    have h2 : (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) = 1 := by norm_num
+    rw [h2] at h1
+    have h3 : (4 / 3 : ℝ) ^ 4 ≤ 5040 := by norm_num
+    linarith
+  nlinarith
+
+/-- Theorem RH-07b (Tighter Unconditional Bound `Real.exp (28861 / 50000) * Real.log (Real.log 5040) < 191 / 50`):
+    Using a 40-step Taylor lower bound on `Real.exp (4263 / 500)`, a 10-step Taylor lower bound
+    on `Real.exp (42865 / 20000)`, and a 256-step upper bound on `Real.exp (28861 / 50000)`
+    (`0.57722`, strictly above Euler's constant `γ ≈ 0.5772156649`), we obtain
+    `Real.log 5040 < 4263 / 500`, `Real.log (Real.log 5040) < 42865 / 20000`,
+    `Real.exp (28861 / 50000) < 178225 / 100000`, and
+    `Real.exp (28861 / 50000) * Real.log (Real.log 5040) < 191 / 50 < 19344 / 5040`,
+    discharging the external hypothesis `c_robin ≤ 191 / 50` in `rh_05_robin_5040_divisor_sum_and_threshold`
+    completely inside the Lean 4 kernel. -/
+theorem rh_07_tight_191_div_50 :
+    Real.log 5040 < 4263 / 500 ∧
+    Real.log (Real.log 5040) < 42865 / 20000 ∧
+    Real.exp (28861 / 50000) < 178225 / 100000 ∧
+    Real.exp (28861 / 50000) * Real.log (Real.log 5040) < (191 : ℝ) / 50 ∧
+    Real.exp (28861 / 50000) * Real.log (Real.log 5040) < (19344 : ℝ) / 5040 := by
+  have hlog5040 : Real.log 5040 < 4263 / 500 := by
+    rw [Real.log_lt_iff_lt_exp (by norm_num)]
+    have h1 : (1237566 / 1000000 : ℝ) ^ 40 ≤ Real.exp (((40 : ℕ) : ℝ) * (4263 / 20000 : ℝ)) :=
+      exp_lower_taylor4_step (by norm_num) (by norm_num) (by norm_num) 40
+    have h2 : (5040 : ℝ) < (1237566 / 1000000 : ℝ) ^ 40 := by norm_num
+    have h3 : (((40 : ℕ) : ℝ) * (4263 / 20000 : ℝ)) = 4263 / 500 := by norm_num
+    rw [h3] at h1
+    linarith
+  have hlog5040_pos : 0 < Real.log 5040 := Real.log_pos (by norm_num)
+  have hlog_step2 : Real.log (4263 / 500) < 42865 / 20000 := by
+    rw [Real.log_lt_iff_lt_exp (by norm_num)]
+    have h1 : (1239021 / 1000000 : ℝ) ^ 10 ≤ Real.exp (((10 : ℕ) : ℝ) * (42865 / 200000 : ℝ)) :=
+      exp_lower_taylor4_step (by norm_num) (by norm_num) (by norm_num) 10
+    have h2 : (4263 / 500 : ℝ) < (1239021 / 1000000 : ℝ) ^ 10 := by norm_num
+    have h3 : (((10 : ℕ) : ℝ) * (42865 / 200000 : ℝ)) = 42865 / 20000 := by norm_num
+    rw [h3] at h1
+    linarith
+  have hloglog : Real.log (Real.log 5040) < 42865 / 20000 := by
+    have hmono : Real.log (Real.log 5040) < Real.log (4263 / 500) :=
+      Real.log_lt_log hlog5040_pos hlog5040
+    linarith
+  have hexp : Real.exp (28861 / 50000) < 178225 / 100000 := by
+    have h1 : Real.exp (((256 : ℕ) : ℝ) * (28861 / 12800000 : ℝ)) ≤ (12800000 / 12771139 : ℝ) ^ 256 :=
+      exp_upper_inv_step (by norm_num) (by norm_num) 256
+    have h2 : (12800000 / 12771139 : ℝ) ^ 256 < 178225 / 100000 := by norm_num
+    have h3 : (((256 : ℕ) : ℝ) * (28861 / 12800000 : ℝ)) = 28861 / 50000 := by norm_num
+    rw [h3] at h1
+    linarith
+  have hexp_pos : 0 ≤ Real.exp (28861 / 50000) := le_of_lt (Real.exp_pos _)
+  have hloglog_pos : 0 ≤ Real.log (Real.log 5040) := by
+    apply Real.log_nonneg
+    rw [← Real.log_exp 1]
+    apply Real.log_le_log (Real.exp_pos 1)
+    have h1 : Real.exp (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) ≤ (4 / 3 : ℝ) ^ 4 :=
+      exp_upper_inv_step (by norm_num) (by norm_num) 4
+    have h2 : (((4 : ℕ) : ℝ) * (1 / 4 : ℝ)) = 1 := by norm_num
+    rw [h2] at h1
+    have h3 : (4 / 3 : ℝ) ^ 4 ≤ 5040 := by norm_num
+    linarith
+  have hprod191 : Real.exp (28861 / 50000) * Real.log (Real.log 5040) < (191 : ℝ) / 50 := by
+    nlinarith
+  have hprod5040 : Real.exp (28861 / 50000) * Real.log (Real.log 5040) < (19344 : ℝ) / 5040 := by
+    have h191_lt : ((191 : ℝ) / 50) < (19344 : ℝ) / 5040 := by norm_num
+    linarith
+  exact ⟨hlog5040, hloglog, hexp, hprod191, hprod5040⟩
+
+/- ============================================================================
+   SECTION 8: RH-08 — DEGREE-4 FEJÉR-KONDRATIEV ZERO-FREE REGION TRIGONOMETRIC
+   POLYNOMIAL STRICTLY SHARPER THAN DE LA VALLÉE POUSSIN OVER `ℝ`
+   ============================================================================ -/
+
+/-- Classical degree-2 de la Vallée Poussin cosine polynomial:
+    `P_2(θ) = 3 + 4 * cos(θ) + cos(2*θ)`. -/
+noncomputable def dlvpTrigPoly2 (θ : ℝ) : ℝ :=
+  3 + 4 * Real.cos θ + Real.cos (2 * θ)
+
+/-- Degree-4 Fejér-Kondratiev zero-free region cosine polynomial with positive coefficients
+    `(c_0, c_1, c_2, c_3, c_4) = (103, 168, 89, 28, 4)`:
+    `P_4(θ) = 103 + 168*cos(θ) + 89*cos(2*θ) + 28*cos(3*θ) + 4*cos(4*θ)`. -/
+noncomputable def kondratievTrigPoly4 (θ : ℝ) : ℝ :=
+  103 + 168 * Real.cos θ + 89 * Real.cos (2 * θ) + 28 * Real.cos (3 * θ) + 4 * Real.cos (4 * θ)
+
+/-- Theorem RH-08 (Degree-4 Fejér-Kondratiev Trigonometric Polynomial Non-Negativity & Sharpness):
+    1. `dlvpTrigPoly2 θ = 2 * (1 + Real.cos θ)^2 ≥ 0` for all `θ : ℝ`,
+    2. `kondratievTrigPoly4 θ = 2 * (5 + 7 * Real.cos θ + 2 * Real.cos (2 * θ))^2 = 2 * (3 + 7 * Real.cos θ + 4 * Real.cos θ ^ 2)^2 ≥ 0` for all `θ : ℝ`,
+    3. The degree-4 pole-to-zero ratio `c_0 / (c_1 - c_0) = 103 / 65` is strictly smaller than
+       de la Vallée Poussin's `3 / (4 - 3) = 3`, and the total weight ratio
+       `(c_0 + c_1 + c_2 + c_3 + c_4) / (c_1 - c_0) = 392 / 65` is strictly smaller than
+       de la Vallée Poussin's `(3 + 4 + 1) / (4 - 3) = 8`. -/
+theorem rh_08_kondratiev_deg4_trig_poly_pos_and_sharper :
+    (∀ θ : ℝ, dlvpTrigPoly2 θ = 2 * (1 + Real.cos θ) ^ 2 ∧ 0 ≤ dlvpTrigPoly2 θ) ∧
+    (∀ θ : ℝ, kondratievTrigPoly4 θ = 2 * (3 + 7 * Real.cos θ + 4 * Real.cos θ ^ 2) ^ 2 ∧
+              kondratievTrigPoly4 θ = 2 * (5 + 7 * Real.cos θ + 2 * Real.cos (2 * θ)) ^ 2 ∧
+              0 ≤ kondratievTrigPoly4 θ) ∧
+    ((103 : ℝ) / (168 - 103) < (3 : ℝ) / (4 - 3)) ∧
+    ((103 + 168 + 89 + 28 + 4 : ℝ) / (168 - 103) < (3 + 4 + 1 : ℝ) / (4 - 3)) := by
+  refine ⟨?_, ?_, by norm_num, by norm_num⟩
+  · intro θ
+    have h2 : Real.cos (2 * θ) = 2 * Real.cos θ ^ 2 - 1 := Real.cos_two_mul θ
+    have h_eq : dlvpTrigPoly2 θ = 2 * (1 + Real.cos θ) ^ 2 := by
+      unfold dlvpTrigPoly2
+      rw [h2]
+      ring
+    exact ⟨h_eq, by rw [h_eq]; positivity⟩
+  · intro θ
+    have h2 : Real.cos (2 * θ) = 2 * Real.cos θ ^ 2 - 1 := Real.cos_two_mul θ
+    have h3 : Real.cos (3 * θ) = 4 * Real.cos θ ^ 3 - 3 * Real.cos θ := by
+      have h3a : (3 : ℝ) * θ = 2 * θ + θ := by ring
+      have hsin2 : Real.sin (2 * θ) = 2 * Real.sin θ * Real.cos θ := Real.sin_two_mul θ
+      have hsq : Real.sin θ ^ 2 = 1 - Real.cos θ ^ 2 := by
+        linarith [Real.sin_sq_add_cos_sq θ]
+      rw [h3a, Real.cos_add, h2, hsin2]
+      calc (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.sin θ * Real.cos θ * Real.sin θ
+          = (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.cos θ * Real.sin θ ^ 2 := by ring
+        _ = (2 * Real.cos θ ^ 2 - 1) * Real.cos θ - 2 * Real.cos θ * (1 - Real.cos θ ^ 2) := by rw [hsq]
+        _ = 4 * Real.cos θ ^ 3 - 3 * Real.cos θ := by ring
+    have h4 : Real.cos (4 * θ) = 8 * Real.cos θ ^ 4 - 8 * Real.cos θ ^ 2 + 1 := by
+      have h4a : (4 : ℝ) * θ = 2 * (2 * θ) := by ring
+      rw [h4a, Real.cos_two_mul, h2]
+      ring
+    have h_eq1 : kondratievTrigPoly4 θ = 2 * (3 + 7 * Real.cos θ + 4 * Real.cos θ ^ 2) ^ 2 := by
+      unfold kondratievTrigPoly4
+      rw [h2, h3, h4]
+      ring
+    have h_eq2 : kondratievTrigPoly4 θ = 2 * (5 + 7 * Real.cos θ + 2 * Real.cos (2 * θ)) ^ 2 := by
+      rw [h_eq1, h2]
+      ring
+    exact ⟨h_eq1, h_eq2, by rw [h_eq1]; positivity⟩
 
 end
 

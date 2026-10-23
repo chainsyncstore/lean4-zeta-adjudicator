@@ -235,4 +235,47 @@ theorem rh_06_hadamard_conjugate_pair_strictly_pos_of_imag_nz (s b g : Int) (hg 
   have h2 : 0 < g * g := int_mul_self_pos_of_ne_zero g hg
   omega
 
+/- ============================================================================
+   SECTION 7: RH-07 — RATIONAL INTERVAL CERTIFICATE FOR `exp(γ) * log(log(5040)) < 191/50 < 403/105`
+   ============================================================================ -/
+
+/-- Exact integer cross-multiplication certificates underlying the transcendental
+    Taylor/Padé proof in `RiemannHypothesisMathlib.lean`:
+    1. `178225 * 42865 = 7639614625 < 7640000000 = 191 * 40000000`
+       (`(178225 / 100000) * (42865 / 20000) < 191 / 50`),
+    2. `1787 * 4292 * 105 = 805329540 < 806000000 = 1000 * 2000 * 403`
+       (`(1787 / 1000) * (4292 / 2000) < 403 / 105 = 19344 / 5040`). -/
+theorem rh_07_transcendental_bracket_rational_certificate :
+    (178225 : Int) * 42865 < 191 * 40000000 ∧
+    (1787 : Int) * 4292 * 105 < 1000 * 2000 * 403 := by
+  decide
+
+/- ============================================================================
+   SECTION 8: RH-08 — DEGREE-4 FEJER-KONDRATIEV ZERO-FREE REGION COSINE POLYNOMIAL
+   STRICTLY SHARPER THAN DE LA VALLEE POUSSIN'S `3 + 4*cos(θ) + cos(2*θ)`
+   ============================================================================ -/
+
+/-- Homogenized Chebyshev polynomial of `kondratievTrigPoly4` with Fourier coefficients
+    `(c0, c1, c2, c3, c4) = (103, 168, 89, 28, 4)` under `cos(θ) = u / d`:
+    `P_4(u, d) = 2 * (3*d^2 + 7*u*d + 4*u^2)^2`. -/
+def kondratievChebyshevHomog (u d : Int) : Int :=
+  2 * ((3 * d * d + 7 * u * d + 4 * u * u) * (3 * d * d + 7 * u * d + 4 * u * u))
+
+/-- Theorem RH-08a: For all integers `u, d`, `kondratievChebyshevHomog u d` is universally non-negative (`≥ 0`). -/
+theorem rh_08_kondratiev_chebyshev_nonneg (u d : Int) :
+    0 ≤ kondratievChebyshevHomog u d := by
+  unfold kondratievChebyshevHomog
+  have hsq : 0 ≤ (3 * d * d + 7 * u * d + 4 * u * u) * (3 * d * d + 7 * u * d + 4 * u * u) :=
+    int_mul_self_nonneg (3 * d * d + 7 * u * d + 4 * u * u)
+  omega
+
+/-- Theorem RH-08b: The degree-4 Fejer-Kondratiev Fourier coefficients `(103, 168, 89, 28, 4)`
+    are all strictly positive and strictly improve both the pole-to-zero ratio
+    `c0 / (c1 - c0) = 103 / 65 < 3 / 1` and the total weight ratio
+    `(c0 + c1 + c2 + c3 + c4) / (c1 - c0) = 392 / 65 < 8 / 1` of de la Vallee Poussin's `(3, 4, 1)`. -/
+theorem rh_08_kondratiev_sharper_than_dlvp :
+    (103 : Int) * (4 - 3) < 3 * (168 - 103) ∧
+    (103 + 168 + 89 + 28 + 4 : Int) * (4 - 3) < (3 + 4 + 1) * (168 - 103) := by
+  decide
+
 end RiemannHypothesisAdjudication
