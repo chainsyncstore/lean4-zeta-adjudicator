@@ -222,13 +222,19 @@ theorem rh_04_symSquareRealPart_refuted_on_critical_line :
 /-- Theorem RH-05: Using Mathlib's `Nat.divisors` on the prime-power factors
     `16, 9, 5, 7` of `5040 = 16 * 9 * 5 * 7`, the exact divisor-sum product is
     `(∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) * (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) = 19344`,
-    and the normalized Robin ratio satisfies `(19344 : ℝ) / 5040 = 134 / 35 > 19 / 5`. -/
+    the exact reduced rational ratio is `(19344 : ℝ) / 5040 = 403 / 105` (refuting the
+    incorrect reduction `134 / 35 = 402 / 105`), and `(403 : ℝ) / 105` strictly exceeds both
+    `19 / 5 = 3.80` and the rational upper bound `191 / 50 = 3.82` on `e^γ * log(log(5040)) ≈ 3.81743`. -/
 theorem rh_05_robin_5040_divisor_sum_and_threshold :
     16 * 9 * 5 * 7 = 5040 ∧
     (∑ d ∈ Nat.divisors 16, d) * (∑ d ∈ Nat.divisors 9, d) *
       (∑ d ∈ Nat.divisors 5, d) * (∑ d ∈ Nat.divisors 7, d) = 19344 ∧
+    ((19344 : ℝ) / 5040 = (403 : ℝ) / 105) ∧
+    ((19344 : ℝ) / 5040 ≠ (134 : ℝ) / 35) ∧
+    ((19 : ℝ) / 5 < (191 : ℝ) / 50) ∧
+    ((191 : ℝ) / 50 < (19344 : ℝ) / 5040) ∧
     ((19 : ℝ) / 5 < (19344 : ℝ) / 5040) := by
-  refine ⟨by norm_num, by decide, by norm_num⟩
+  refine ⟨by norm_num, by decide, by norm_num, by norm_num, by norm_num, by norm_num, by norm_num⟩
 
 /- ============================================================================
    SECTION 6: RH-06 — HADAMARD CONJUGATE-PAIR QUADRATIC FACTOR POSITIVITY OVER `ℂ`

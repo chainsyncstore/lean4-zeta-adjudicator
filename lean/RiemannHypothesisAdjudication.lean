@@ -196,10 +196,15 @@ def sigma5040 : Int := 31 * 13 * 6 * 8
 def robinMargin5040 (k : Int) : Int :=
   (19 * 5040 - 5 * sigma5040) * k * k
 
-/-- Theorem RH-05: `sigma5040 = 19344` and `robinMargin5040 1 = -960 < 0`,
-    proving that `sigma(5040) / 5040 = 134 / 35 > 19 / 5` violates the unqualified bound. -/
+/-- Theorem RH-05: `sigma5040 = 19344`, the exact reduced fraction is
+    `sigma(5040) / 5040 = 403 / 105` (`19344 * 105 = 5040 * 403`, and `19344 * 35 ≠ 5040 * 134`),
+    `robinMargin5040 1 = -960 < 0` (`19 / 5 < 403 / 105`), and `191 * 105 < 50 * 403`
+    (`191 / 50 = 3.82 < 403 / 105 = sigma(5040) / 5040`). -/
 theorem rh_05_robin_5040_threshold_necessity :
     sigma5040 = 19344 ∧
+    sigma5040 * 105 = 5040 * 403 ∧
+    sigma5040 * 35 ≠ 5040 * 134 ∧
+    191 * 105 < 50 * 403 ∧
     robinMargin5040 1 = -960 ∧
     robinMargin5040 1 < 0 := by
   decide
